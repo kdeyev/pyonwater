@@ -4,11 +4,11 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-import urllib.parse
 from typing import TYPE_CHECKING, Any
+import urllib.parse
 
-import pytz
 from dateutil import parser
+import pytz
 from tenacity import retry, retry_if_exception_type
 
 if TYPE_CHECKING:
@@ -328,7 +328,7 @@ class Client:
         self.account = account
         self.cookies = None
         self.authenticated = False
-        self.token_expiration = datetime.datetime.utcnow()
+        self.token_expiration = datetime.datetime.now()
         self.user_agent = None
 
     def _update_token_expiration(self):
@@ -412,7 +412,7 @@ class Client:
     @property
     def token_valid(self):
         """Validate the token."""
-        if self.authenticated or (datetime.datetime.utcnow() < self.token_expiration):
+        if self.authenticated or (datetime.datetime.now() < self.token_expiration):
             return True
 
         return False
