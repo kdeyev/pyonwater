@@ -4,11 +4,11 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-from typing import TYPE_CHECKING, Any
 import urllib.parse
+from typing import TYPE_CHECKING, Any
 
-from dateutil import parser
 import pytz
+from dateutil import parser
 from tenacity import retry, retry_if_exception_type
 
 if TYPE_CHECKING:
@@ -109,7 +109,8 @@ class Meter:
 
         try:
             historical_data = await self.get_historical_datas(
-                days_to_load=days_to_load, client=client
+                days_to_load=days_to_load,
+                client=client,
             )
             if not self.last_historical_data:
                 self.last_historical_data = historical_data
@@ -152,16 +153,16 @@ class Meter:
         read_unit = reading[READ_UNITS_FIELD]
         read_unit_upper = read_unit.upper()
         amount = float(reading[READ_AMOUNT_FIELD])
-        amount = self.convert(read_unit_upper, amount)
-        return amount
+        return self.convert(read_unit_upper, amount)
 
     def convert(self, read_unit_upper, amount):
         if self.metric_measurement_system:
             if read_unit_upper in MEASUREMENT_CUBICMETERS:
                 pass
             else:
+                msg = f"Unsupported measurement unit: {read_unit_upper}"
                 raise EyeOnWaterAPIError(
-                    f"Unsupported measurement unit: {read_unit_upper}"
+                    msg,
                 )
         else:
             if read_unit_upper == MEASUREMENT_KILOGALLONS:
@@ -177,16 +178,19 @@ class Meter:
             elif read_unit_upper in MEASUREMENT_CF:
                 amount = amount * 7.48052
             else:
+                msg = f"Unsupported measurement unit: {read_unit_upper}"
                 raise EyeOnWaterAPIError(
-                    f"Unsupported measurement unit: {read_unit_upper}"
+                    msg,
                 )
         return amount
 
     async def get_historical_datas(self, days_to_load: int, client: Client):
         """Retrieve historical data for today and past N days."""
-
         today = datetime.datetime.now().replace(
-            hour=0, minute=0, second=0, microsecond=0
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
         )
 
         date_list = [today - datetime.timedelta(days=x) for x in range(0, days_to_load)]
@@ -195,14 +199,14 @@ class Meter:
         # TODO: identify missing days and request only missing dates.
 
         _LOGGER.info(
-            f"requesting historical statistics for {self.meter_uuid} on {date_list}"
+            f"requesting historical statistics for {self.meter_uuid} on {date_list}",
         )
 
         statistics = []
 
         for date in date_list:
             _LOGGER.info(
-                f"requesting historical statistics for {self.meter_uuid} on {date}"
+                f"requesting historical statistics for {self.meter_uuid} on {date}",
             )
             try:
                 statistics += await self.get_historical_data(date=date, client=client)
@@ -212,8 +216,7 @@ class Meter:
         return statistics
 
     async def get_historical_data(self, date: datetime, client: Client):
-        """Retrieve the historical hourly water readings for a requested day"""
-
+        """Retrieve the historical hourly water readings for a requested day."""
         if self.metric_measurement_system:
             units = "CM"
         else:
@@ -236,13 +239,16 @@ class Meter:
             "query": {"query": {"terms": {"meter.meter_uuid": [self.meter_uuid]}}},
         }
         data = await client.request(
-            path=CONSUMPTION_ENDPOINT, method="post", json=query
+            path=CONSUMPTION_ENDPOINT,
+            method="post",
+            json=query,
         )
         data = json.loads(data)
 
         key = f"{self.meter_uuid},0"
         if key not in data["timeseries"]:
-            raise EyeOnWaterResponseIsEmpty("Response is empty")
+            msg = "Response is empty"
+            raise EyeOnWaterResponseIsEmpty(msg)
 
         timezone = data["hit"]["meter.timezone"][0]
         timezone = pytz.timezone(timezone)
@@ -255,7 +261,7 @@ class Meter:
                 {
                     "dt": timezone.localize(parser.parse(d["date"])),
                     "reading": self.convert(response_unit, d["bill_read"]),
-                }
+                },
             )
 
         statistics.sort(key=lambda d: d["dt"])
@@ -322,7 +328,7 @@ class Client:
         self.account = account
         self.cookies = None
         self.authenticated = False
-        self.token_expiration = datetime.datetime.now()
+        self.token_expiration = datetime.datetime.utcnow()
         self.user_agent = None
 
     def _update_token_expiration(self):
@@ -345,7 +351,8 @@ class Client:
         )
         if resp.status == 403:
             _LOGGER.error("Reached ratelimit")
-            raise EyeOnWaterRateLimitError("Reached ratelimit")
+            msg = "Reached ratelimit"
+            raise EyeOnWaterRateLimitError(msg)
         elif resp.status == 401:
             _LOGGER.debug("Authentication token expired; requesting new token")
             self.authenticated = False
@@ -359,7 +366,8 @@ class Client:
 
         if resp.status != 200:
             _LOGGER.error(f"Request failed: {resp.status} {data}")
-            raise EyeOnWaterException(f"Request failed: {resp.status} {data}")
+            msg = f"Request failed: {resp.status} {data}"
+            raise EyeOnWaterException(msg)
 
         return data
 
@@ -404,7 +412,7 @@ class Client:
     @property
     def token_valid(self):
         """Validate the token."""
-        if self.authenticated or (datetime.datetime.now() < self.token_expiration):
+        if self.authenticated or (datetime.datetime.utcnow() < self.token_expiration):
             return True
 
         return False
