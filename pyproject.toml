@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyonwater"
-version = "0.1.1"
+version = "0.1.2"
 description = "EyeOnWater client library."
 authors = ["Konstantin Deev <kn.deev@gmail.com>"]
 license = "MIT"
@@ -11,7 +11,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.9"
 aiohttp = "^3.8.5"
 tenacity = "^8.2.3"
 pytz = "^2023.3"
