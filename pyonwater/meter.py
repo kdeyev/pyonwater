@@ -20,6 +20,7 @@ from .exceptions import (
     EyeOnWaterResponseIsEmpty,
 )
 from .meter_reader import MeterReader
+from .models import DataPoint
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -50,7 +51,7 @@ class Meter:
         """Initialize the meter."""
         self.reader = reader
         self.meter_info = None
-        self.last_historical_data = []
+        self.last_historical_data: list[DataPoint] = []
         self.reading_data = None
 
     @property
@@ -77,8 +78,7 @@ class Meter:
                 self.last_historical_data = historical_data
             elif (
                 historical_data
-                and historical_data[-1]["reading"]
-                > self.last_historical_data[-1]["reading"]
+                and historical_data[-1].dt > self.last_historical_data[-1].dt
             ):
                 # Take newer data
                 self.last_historical_data = historical_data
@@ -105,7 +105,7 @@ class Meter:
         return flags[flag]
 
     @property
-    def reading(self):
+    def reading(self) -> float:
         """Returns the latest meter reading in gal."""
         reading = self.reading_data["latest_read"]
         if READ_UNITS_FIELD not in reading:

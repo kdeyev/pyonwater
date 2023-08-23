@@ -19,6 +19,7 @@ from .exceptions import (
     EyeOnWaterRateLimitError,
     EyeOnWaterResponseIsEmpty,
 )
+from .models import DataPoint
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -105,7 +106,9 @@ class MeterReader:
                 )
         return amount
 
-    async def read_historical_data(self, client: Client, days_to_load: int):
+    async def read_historical_data(
+        self, client: Client, days_to_load: int
+    ) -> list[DataPoint]:
         """Retrieve historical data for today and past N days."""
         today = datetime.datetime.now().replace(
             hour=0,
@@ -136,7 +139,9 @@ class MeterReader:
 
         return statistics
 
-    async def read_historical_data_one_day(self, client: Client, date: datetime):
+    async def read_historical_data_one_day(
+        self, client: Client, date: datetime
+    ) -> list[DataPoint]:
         """Retrieve the historical hourly water readings for a requested day."""
         if self.metric_measurement_system:
             units = "CM"
@@ -179,12 +184,12 @@ class MeterReader:
         for d in data:
             response_unit = d["display_unit"].upper()
             statistics.append(
-                {
-                    "dt": timezone.localize(parser.parse(d["date"])),
-                    "reading": self.convert(response_unit, d["bill_read"]),
-                },
+                DataPoint(
+                    dt=timezone.localize(parser.parse(d["date"])),
+                    reading=self.convert(response_unit, d["bill_read"]),
+                )
             )
 
-        statistics.sort(key=lambda d: d["dt"])
+        statistics.sort(key=lambda d: d.dt)
 
         return statistics
