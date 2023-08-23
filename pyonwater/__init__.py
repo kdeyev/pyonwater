@@ -11,3 +11,4 @@ from .exceptions import (  # noqa
     EyeOnWaterResponseIsEmpty,
 )
 from .meter import Meter  # noqa
+from .meter_reader import MeterReader  # noqa

@@ -20,6 +20,7 @@ from .exceptions import (
     EyeOnWaterResponseIsEmpty,
 )
 from .meter import Meter
+from .meter_reader import MeterReader
 
 DASHBOARD_ENDPOINT = "/dashboard/"
 
@@ -48,8 +49,8 @@ class Account:
         self.password = password
         self.metric_measurement_system = metric_measurement_system
 
-    async def fetch_meters(self, client: Client):
-        """List the meters associated with the account."""
+    async def fetch_meter_readers(self, client: Client):
+        """List the meter readers associated with the account."""
         path = DASHBOARD_ENDPOINT + urllib.parse.quote(self.username)
         data = await client.request(path=path, method="get")
 
@@ -67,7 +68,7 @@ class Account:
 
                     meter_uuid = meter_info[METER_UUID_FIELD]
 
-                    meter = Meter(
+                    meter = MeterReader(
                         meter_uuid=meter_uuid,
                         meter_info=meter_info,
                         metric_measurement_system=self.metric_measurement_system,
@@ -75,3 +76,8 @@ class Account:
                     meters.append(meter)
 
         return meters
+
+    async def fetch_meters(self, client: Client):
+        """List the meter states associated with the account."""
+        meter_readers = await self.fetch_meter_readers(client)
+        return [Meter(reader) for reader in meter_readers]

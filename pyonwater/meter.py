@@ -19,6 +19,7 @@ from .exceptions import (
     EyeOnWaterRateLimitError,
     EyeOnWaterResponseIsEmpty,
 )
+from .meter_reader import MeterReader
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -43,45 +44,32 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class Meter:
-    """Class represents meter object."""
+    """Class represents meter state."""
 
-    def __init__(
-        self,
-        meter_uuid: str,
-        meter_info: dict[str, Any],
-        metric_measurement_system: bool,
-    ) -> None:
+    def __init__(self, reader: MeterReader) -> None:
         """Initialize the meter."""
-        self.meter_uuid = meter_uuid
-        self.meter_id = meter_info["meter_id"]
-
+        self.reader = reader
         self.meter_info = None
-
-        self.metric_measurement_system = metric_measurement_system
-        self.native_unit_of_measurement = (
-            "m\u00b3" if self.metric_measurement_system else "gal"
-        )
+        self.last_historical_data = []
         self.reading_data = None
 
-        self.last_historical_data = []
+    @property
+    def meter_uuid(self) -> str:
+        return self.reader.meter_uuid
 
-    async def read_meter(self, client: Client, days_to_load=3) -> dict[str, Any]:
+    @property
+    def meter_id(self) -> str:
+        return self.reader.meter_id
+
+    async def read_meter(self, client: Client, days_to_load: int = 3) -> dict[str, Any]:
         """Triggers an on-demand meter read and returns it when complete."""
-        _LOGGER.debug("Requesting meter reading")
 
-        query = {"query": {"terms": {"meter.meter_uuid": [self.meter_uuid]}}}
-        data = await client.request(path=SEARCH_ENDPOINT, method="post", json=query)
-        data = json.loads(data)
-        meters = data["elastic_results"]["hits"]["hits"]
-        if len(meters) > 1:
-            msg = "More than one meter reading found"
-            raise Exception(msg)
-
-        self.meter_info = meters[0]["_source"]
+        self.meter_info = await self.reader.read_meter(client)
         self.reading_data = self.meter_info["register_0"]
 
         try:
-            historical_data = await self.read_historical_data(
+            # TODO: identify missing days and request only missing dates.
+            historical_data = await self.reader.read_historical_data(
                 days_to_load=days_to_load,
                 client=client,
             )
@@ -126,117 +114,4 @@ class Meter:
         read_unit = reading[READ_UNITS_FIELD]
         read_unit_upper = read_unit.upper()
         amount = float(reading[READ_AMOUNT_FIELD])
-        return self.convert(read_unit_upper, amount)
-
-    def convert(self, read_unit_upper, amount):
-        if self.metric_measurement_system:
-            if read_unit_upper in MEASUREMENT_CUBICMETERS:
-                pass
-            else:
-                msg = f"Unsupported measurement unit: {read_unit_upper}"
-                raise EyeOnWaterAPIError(
-                    msg,
-                )
-        else:
-            if read_unit_upper == MEASUREMENT_KILOGALLONS:
-                amount = amount * 1000
-            elif read_unit_upper == MEASUREMENT_100_GALLONS:
-                amount = amount * 100
-            elif read_unit_upper == MEASUREMENT_10_GALLONS:
-                amount = amount * 10
-            elif read_unit_upper == MEASUREMENT_GALLONS:
-                pass
-            elif read_unit_upper == MEASUREMENT_CCF:
-                amount = amount * 748.052
-            elif read_unit_upper in MEASUREMENT_CF:
-                amount = amount * 7.48052
-            else:
-                msg = f"Unsupported measurement unit: {read_unit_upper}"
-                raise EyeOnWaterAPIError(
-                    msg,
-                )
-        return amount
-
-    async def read_historical_data(self, days_to_load: int, client: Client):
-        """Retrieve historical data for today and past N days."""
-        today = datetime.datetime.now().replace(
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
-        )
-
-        date_list = [today - datetime.timedelta(days=x) for x in range(0, days_to_load)]
-        date_list.reverse()
-
-        # TODO: identify missing days and request only missing dates.
-
-        _LOGGER.info(
-            f"requesting historical statistics for {self.meter_uuid} on {date_list}",
-        )
-
-        statistics = []
-
-        for date in date_list:
-            _LOGGER.info(
-                f"requesting historical statistics for {self.meter_uuid} on {date}",
-            )
-            try:
-                statistics += await self._read_historical_data(date=date, client=client)
-            except EyeOnWaterResponseIsEmpty:
-                continue
-
-        return statistics
-
-    async def _read_historical_data(self, date: datetime, client: Client):
-        """Retrieve the historical hourly water readings for a requested day."""
-        if self.metric_measurement_system:
-            units = "CM"
-        else:
-            units = self.native_unit_of_measurement.upper()
-
-        query = {
-            "params": {
-                "source": "barnacle",
-                "aggregate": "hourly",
-                "units": units,
-                "combine": "true",
-                "perspective": "billing",
-                "display_minutes": True,
-                "display_hours": True,
-                "display_days": True,
-                "date": date.strftime("%m/%d/%Y"),
-                "furthest_zoom": "hr",
-                "display_weeks": True,
-            },
-            "query": {"query": {"terms": {"meter.meter_uuid": [self.meter_uuid]}}},
-        }
-        data = await client.request(
-            path=CONSUMPTION_ENDPOINT,
-            method="post",
-            json=query,
-        )
-        data = json.loads(data)
-
-        key = f"{self.meter_uuid},0"
-        if key not in data["timeseries"]:
-            msg = "Response is empty"
-            raise EyeOnWaterResponseIsEmpty(msg)
-
-        timezone = data["hit"]["meter.timezone"][0]
-        timezone = pytz.timezone(timezone)
-
-        data = data["timeseries"][key]["series"]
-        statistics = []
-        for d in data:
-            response_unit = d["display_unit"].upper()
-            statistics.append(
-                {
-                    "dt": timezone.localize(parser.parse(d["date"])),
-                    "reading": self.convert(response_unit, d["bill_read"]),
-                },
-            )
-
-        statistics.sort(key=lambda d: d["dt"])
-
-        return statistics
+        return self.reader.convert(read_unit_upper, amount)
