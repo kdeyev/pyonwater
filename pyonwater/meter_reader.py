@@ -19,7 +19,7 @@ from .exceptions import (
     EyeOnWaterRateLimitError,
     EyeOnWaterResponseIsEmpty,
 )
-from .models import DataPoint
+from .models import DataPoint, MeterInfo, ReadingData, ReadingDataFlags
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -61,7 +61,7 @@ class MeterReader:
             "m\u00b3" if self.metric_measurement_system else "gal"
         )
 
-    async def read_meter(self, client: Client) -> dict[str, Any]:
+    async def read_meter(self, client: Client) -> MeterInfo:
         """Triggers an on-demand meter read and returns it when complete."""
         _LOGGER.debug("Requesting meter reading")
 
@@ -73,7 +73,9 @@ class MeterReader:
             msg = "More than one meter reading found"
             raise Exception(msg)
 
-        meter_info = meters[0]["_source"]
+        ReadingDataFlags.parse_obj(meters[0]["_source"]["register_0"]["flags"])
+        ReadingData.parse_obj(meters[0]["_source"]["register_0"])
+        meter_info = MeterInfo.parse_obj(meters[0]["_source"])
 
         return meter_info
 

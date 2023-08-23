@@ -20,7 +20,7 @@ from .exceptions import (
     EyeOnWaterResponseIsEmpty,
 )
 from .meter_reader import MeterReader
-from .models import DataPoint
+from .models import DataPoint, MeterInfo, ReadingData, ReadingDataFlags
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -50,9 +50,9 @@ class Meter:
     def __init__(self, reader: MeterReader) -> None:
         """Initialize the meter."""
         self.reader = reader
-        self.meter_info = None
+        self.meter_info: MeterInfo | None = None
         self.last_historical_data: list[DataPoint] = []
-        self.reading_data = None
+        self.reading_data: ReadingData | None = None
 
     @property
     def meter_uuid(self) -> str:
@@ -62,11 +62,11 @@ class Meter:
     def meter_id(self) -> str:
         return self.reader.meter_id
 
-    async def read_meter(self, client: Client, days_to_load: int = 3) -> dict[str, Any]:
+    async def read_meter(self, client: Client, days_to_load: int = 3) -> MeterInfo:
         """Triggers an on-demand meter read and returns it when complete."""
 
         self.meter_info = await self.reader.read_meter(client)
-        self.reading_data = self.meter_info["register_0"]
+        self.reading_data = self.meter_info.reading_data
 
         try:
             # TODO: identify missing days and request only missing dates.
@@ -82,9 +82,9 @@ class Meter:
             ):
                 # Take newer data
                 self.last_historical_data = historical_data
-            elif historical_data[-1]["reading"] == self.last_historical_data[-1][
-                "reading"
-            ] and len(historical_data) > len(self.last_historical_data):
+            elif historical_data[-1].reading == self.last_historical_data[
+                -1
+            ].reading and len(historical_data) > len(self.last_historical_data):
                 # If it the same date - take more data
                 self.last_historical_data = historical_data
 
@@ -96,13 +96,9 @@ class Meter:
         """Define attributes."""
         return self.meter_info
 
-    def get_flags(self, flag) -> bool:
+    def get_flags(self, flag) -> ReadingDataFlags:
         """Define flags."""
-        flags = self.reading_data["flags"]
-        if flag not in flags:
-            msg = f"Cannot find {flag} field"
-            raise EyeOnWaterAPIError(msg)
-        return flags[flag]
+        return self.reading_data.flags
 
     @property
     def reading(self) -> float:
