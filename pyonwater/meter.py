@@ -95,4 +95,4 @@ class Meter:
         if not self.reading_data:
             raise EyeOnWaterException("Data was not fetched")
         reading = self.reading_data.latest_read
-        return self.reader.convert(reading.units.upper(), reading.full_read)
+        return self.reader.convert(reading.units, reading.full_read)

@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from .units import Units
+
 
 class Service(BaseModel):
     class_code_normalized: str
@@ -185,11 +187,11 @@ class ServiceAgreement(BaseModel):
 
 class LatestRead(BaseModel):
     bill_read: str
-    bill_display_units: str
+    bill_display_units: Units
     full_read: float
     read_time: datetime
     has_endpoints: bool
-    units: str
+    units: Units
     method: str
 
 
@@ -253,7 +255,7 @@ class Reading(BaseModel):
     communication_security: str
     meter_size_desc: str
     barnacle_uuid: str
-    unit: str
+    unit: Units
     customer_name: str
     cell_type: str
     pi_status: str

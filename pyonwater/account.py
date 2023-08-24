@@ -9,13 +9,7 @@ from .meter import Meter
 from .meter_reader import MeterReader
 
 DASHBOARD_ENDPOINT = "/dashboard/"
-
-
 METER_UUID_FIELD = "meter_uuid"
-READ_UNITS_FIELD = "units"
-READ_AMOUNT_FIELD = "full_read"
-
-METER_PREFIX = "var new_barInfo = "
 INFO_PREFIX = "AQ.Views.MeterPicker.meters = "
 
 

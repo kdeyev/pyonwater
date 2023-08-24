@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from .units import Units
+
 
 class Register0EncoderItem(BaseModel):
     dials: int
@@ -44,7 +46,7 @@ class Params(BaseModel):
     aggregate: str
     aggregate_group: str
     perspective: str
-    units: str
+    units: Units
     start_date_tz: str
     adjust_to: bool
     combine_group: bool
@@ -53,7 +55,7 @@ class Params(BaseModel):
 class Series(BaseModel):
     bill_read: float
     end_date: datetime
-    display_unit: str
+    display_unit: Units
     meter_uuid: int
     value: float
     start_date: datetime
@@ -61,7 +63,7 @@ class Series(BaseModel):
     register_number: int
     estimated: int
     raw_read: int
-    unit: str
+    unit: Units
 
 
 class Legend(BaseModel):
