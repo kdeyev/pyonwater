@@ -1,24 +1,10 @@
 """EyeOnWater API integration."""
 from __future__ import annotations
 
-import datetime
-import json
-import logging
-from typing import TYPE_CHECKING, Any
 import urllib.parse
 
-from dateutil import parser
-import pytz
-from tenacity import retry, retry_if_exception_type
-
 from .client import Client
-from .exceptions import (
-    EyeOnWaterAPIError,
-    EyeOnWaterAuthError,
-    EyeOnWaterAuthExpired,
-    EyeOnWaterRateLimitError,
-    EyeOnWaterResponseIsEmpty,
-)
+from .exceptions import EyeOnWaterAPIError
 from .meter import Meter
 from .meter_reader import MeterReader
 
@@ -49,7 +35,7 @@ class Account:
         self.password = password
         self.metric_measurement_system = metric_measurement_system
 
-    async def fetch_meter_readers(self, client: Client):
+    async def fetch_meter_readers(self, client: Client) -> list[MeterReader]:
         """List the meter readers associated with the account."""
         path = DASHBOARD_ENDPOINT + urllib.parse.quote(self.username)
         data = await client.request(path=path, method="get")
@@ -77,7 +63,7 @@ class Account:
 
         return meters
 
-    async def fetch_meters(self, client: Client):
+    async def fetch_meters(self, client: Client) -> list[Meter]:
         """List the meter states associated with the account."""
         meter_readers = await self.fetch_meter_readers(client)
         return [Meter(reader) for reader in meter_readers]

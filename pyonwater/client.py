@@ -5,10 +5,7 @@ import datetime
 import json
 import logging
 from typing import TYPE_CHECKING, Any
-import urllib.parse
 
-from dateutil import parser
-import pytz
 from tenacity import retry, retry_if_exception_type
 
 if TYPE_CHECKING:
@@ -16,12 +13,10 @@ if TYPE_CHECKING:
     from .account import Account
 
 from .exceptions import (
-    EyeOnWaterAPIError,
     EyeOnWaterAuthError,
     EyeOnWaterAuthExpired,
     EyeOnWaterException,
     EyeOnWaterRateLimitError,
-    EyeOnWaterResponseIsEmpty,
 )
 
 TOKEN_EXPIRATION = datetime.timedelta(minutes=15)
@@ -44,16 +39,16 @@ class Client:
         self.token_expiration = datetime.datetime.now()
         self.user_agent = None
 
-    def _update_token_expiration(self):
+    def _update_token_expiration(self) -> None:
         self.token_expiration = datetime.datetime.now() + TOKEN_EXPIRATION
 
-    @retry(retry=retry_if_exception_type(EyeOnWaterAuthExpired))
+    @retry(retry=retry_if_exception_type(EyeOnWaterAuthExpired))  # type: ignore
     async def request(
         self,
         path: str,
         method: str,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> str:
         """Make API calls against the eow API."""
         await self.authenticate()
         resp = await self.websession.request(
@@ -75,7 +70,7 @@ class Client:
         # Since API call did not return a 400 code, update the token_expiration.
         self._update_token_expiration()
 
-        data = await resp.text()
+        data: str = await resp.text()
 
         if resp.status != 200:
             _LOGGER.error(f"Request failed: {resp.status} {data}")
@@ -84,9 +79,9 @@ class Client:
 
         return data
 
-    async def authenticate(self):
+    async def authenticate(self) -> None:
         """Authenticate the client."""
-        if not self.token_valid:
+        if not self.is_token_valid:
             _LOGGER.debug("Requesting login token")
 
             resp = await self.websession.request(
@@ -116,14 +111,14 @@ class Client:
             self.authenticated = True
             _LOGGER.debug("Successfully retrieved login token")
 
-    def extract_json(self, line, prefix):
+    def extract_json(self, line: str, prefix: str) -> list[dict[str, Any]]:
         """Extract JSON response."""
         line = line[line.find(prefix) + len(prefix) :]
         line = line[: line.find(";")]
-        return json.loads(line)
+        return json.loads(line)  # type: ignore
 
     @property
-    def token_valid(self):
+    def is_token_valid(self) -> bool:
         """Validate the token."""
         if self.authenticated or (datetime.datetime.now() < self.token_expiration):
             return True

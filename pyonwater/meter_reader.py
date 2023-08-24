@@ -5,25 +5,18 @@ import datetime
 import json
 import logging
 from typing import TYPE_CHECKING, Any
-import urllib.parse
 
-from dateutil import parser
+from pydantic import ValidationError
 import pytz
-from tenacity import retry, retry_if_exception_type
 
 from .client import Client
-from .exceptions import (
-    EyeOnWaterAPIError,
-    EyeOnWaterAuthError,
-    EyeOnWaterAuthExpired,
-    EyeOnWaterRateLimitError,
-    EyeOnWaterResponseIsEmpty,
-)
-from .models import MeterInfo, DataPoint
-from pydantic import BaseModel, ValidationError
+from .eow_historical_models import HistoricalData
+from .eow_models import MeterInfo
+from .exceptions import EyeOnWaterAPIError, EyeOnWaterResponseIsEmpty
+from .models import DataPoint
 
 if TYPE_CHECKING:
-    from aiohttp import ClientSession
+    pass
 
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
 CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
@@ -55,7 +48,7 @@ class MeterReader:
     ) -> None:
         """Initialize the meter."""
         self.meter_uuid = meter_uuid
-        self.meter_id = meter_info["meter_id"]
+        self.meter_id: str = meter_info["meter_id"]
 
         self.metric_measurement_system = metric_measurement_system
         self.native_unit_of_measurement = (
@@ -78,11 +71,11 @@ class MeterReader:
             meter_info = MeterInfo.parse_obj(meters[0]["_source"])
         except ValidationError as e:
             msg = f"Unexpected EOW response {e}"
-            raise EyeOnWaterAPIError(msg)
+            raise EyeOnWaterAPIError(msg) from e
 
         return meter_info
 
-    def convert(self, read_unit_upper, amount):
+    def convert(self, read_unit_upper: str, amount: float) -> float:
         if self.metric_measurement_system:
             if read_unit_upper in MEASUREMENT_CUBICMETERS:
                 pass
@@ -145,7 +138,7 @@ class MeterReader:
         return statistics
 
     async def read_historical_data_one_day(
-        self, client: Client, date: datetime
+        self, client: Client, date: datetime.datetime
     ) -> list[DataPoint]:
         """Retrieve the historical hourly water readings for a requested day."""
         if self.metric_measurement_system:
@@ -174,24 +167,28 @@ class MeterReader:
             method="post",
             json=query,
         )
-        data = json.loads(data)
+        try:
+            data = HistoricalData.parse_raw(data)
+        except ValidationError as e:
+            msg = f"Unexpected EOW response {e}"
+            raise EyeOnWaterAPIError(msg) from e
 
         key = f"{self.meter_uuid},0"
-        if key not in data["timeseries"]:
-            msg = "Response is empty"
+        if key not in data.timeseries:
+            msg = f"Meter {key} not found"
             raise EyeOnWaterResponseIsEmpty(msg)
 
-        timezone = data["hit"]["meter.timezone"][0]
-        timezone = pytz.timezone(timezone)
+        timezones = data.hit.meter_timezone
+        timezone = pytz.timezone(timezones[0])
 
-        data = data["timeseries"][key]["series"]
+        data = data.timeseries[key].series
         statistics = []
         for d in data:
-            response_unit = d["display_unit"].upper()
+            response_unit = d.display_unit.upper()
             statistics.append(
                 DataPoint(
-                    dt=timezone.localize(parser.parse(d["date"])),
-                    reading=self.convert(response_unit, d["bill_read"]),
+                    dt=timezone.localize(d.date),
+                    reading=self.convert(response_unit, d.bill_read),
                 )
             )
 

@@ -1,29 +1,17 @@
 """EyeOnWater API integration."""
 from __future__ import annotations
 
-import datetime
-import json
 import logging
-from typing import TYPE_CHECKING, Any
-import urllib.parse
-
-from dateutil import parser
-import pytz
-from tenacity import retry, retry_if_exception_type
+from typing import TYPE_CHECKING
 
 from .client import Client
-from .exceptions import (
-    EyeOnWaterAPIError,
-    EyeOnWaterAuthError,
-    EyeOnWaterAuthExpired,
-    EyeOnWaterRateLimitError,
-    EyeOnWaterResponseIsEmpty,
-)
+from .eow_models import Flags, MeterInfo, Reading
+from .exceptions import EyeOnWaterException, EyeOnWaterResponseIsEmpty
 from .meter_reader import MeterReader
-from .models import DataPoint, MeterInfo, Reading, Flags
+from .models import DataPoint
 
 if TYPE_CHECKING:
-    from aiohttp import ClientSession
+    pass
 
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
 CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
@@ -35,7 +23,6 @@ MEASUREMENT_CF = ["CF", "CUBIC_FEET"]
 MEASUREMENT_CCF = "CCF"
 MEASUREMENT_KILOGALLONS = "KGAL"
 MEASUREMENT_CUBICMETERS = ["CM", "CUBIC_METER"]
-
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,7 +46,7 @@ class Meter:
     def meter_id(self) -> str:
         return self.reader.meter_id
 
-    async def read_meter(self, client: Client, days_to_load: int = 3) -> MeterInfo:
+    async def read_meter(self, client: Client, days_to_load: int = 3) -> None:
         """Triggers an on-demand meter read and returns it when complete."""
 
         self.meter_info = await self.reader.read_meter(client)
@@ -89,19 +76,23 @@ class Meter:
             self.last_historical_data = []
 
     @property
-    def attributes(self):
+    def attributes(self) -> MeterInfo:
         """Define attributes."""
+        if not self.meter_info:
+            raise EyeOnWaterException("Data was not fetched")
         return self.meter_info
 
-    def get_flags(self, flag) -> Flags:
+    @property
+    def flags(self) -> Flags:
         """Define flags."""
+        if not self.reading_data:
+            raise EyeOnWaterException("Data was not fetched")
         return self.reading_data.flags
 
     @property
     def reading(self) -> float:
         """Returns the latest meter reading in gal."""
+        if not self.reading_data:
+            raise EyeOnWaterException("Data was not fetched")
         reading = self.reading_data.latest_read
-        read_unit = reading.units
-        read_unit_upper = read_unit.upper()
-        amount = float(reading.full_read)
-        return self.reader.convert(read_unit_upper, amount)
+        return self.reader.convert(reading.units.upper(), reading.full_read)

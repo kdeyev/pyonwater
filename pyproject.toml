@@ -18,59 +18,52 @@ pytz = "^2023.3"
 python-dateutil = "^2.8.2"
 pydantic = "^2.2.1"
 
+[tool.poetry.group.dev.dependencies]
+types-pytz = "^2023.3.0.1"
+
 [tool.black]
 target-version = ["py39", "py310"]
 exclude = 'generated'
 
 [tool.isort]
-# https://github.com/PyCQA/isort/wiki/isort-Settings
 profile = "black"
-# will group `import x` and `from x import` of the same module.
 force_sort_within_sections = true
 known_first_party = [
     "homeassistant",
-    "tests",
-]
-forced_separate = [
-    "tests",
 ]
 combine_as_imports = true
 
 [tool.ruff]
-# The contents of this file is based on https://github.com/home-assistant/core/blob/dev/pyproject.toml
+select = [
+    #"D1",  # pydocstyle errors
+    #"E",  # pycodestyle errors
+    #"W",  # pycodestyle warnings
+    "F",  # flake8
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+    "A",  # prevent using keywords that clobber python builtins
+    "ISC",  # implicit string concatenation
+    "UP",  # alert you when better syntax is available in your python version
+    "RUF",  # the ruff developer's own rules
 
-target-version = "py310"
-
-select = ["ALL"]
-
-# All the ones without a comment were the ones that are currently violated
-# by the codebase. The plan is to fix them all (when sensible) and then enable them.
+]
 ignore = [
-    #"ANN",
-    #"ANN101",  # Missing type annotation for {name} in method
-    #"ANN401",  # Dynamically typed expressions (typing.Any) are disallowed in {name}
-    #"D401",    # First line of docstring should be in imperative mood
-    #"E501",    # line too long
-    #"FBT001",  # Boolean positional arg in function definition
-    #"FBT002",  # Boolean default value in function definition
-    #"FIX004",  # Line contains HACK, consider resolving the issue
-    #"PD901",   # df is a bad variable name. Be kinder to your future self.
-    #"PERF203",# `try`-`except` within a loop incurs performance overhead
-    #"PLR0913", # Too many arguments to function call (N > 5)
-    #"PLR2004", # Magic value used in comparison, consider replacing X with a constant variable
-    #"S101",    # Use of assert detected
-    #"SLF001",  # Private member accessed
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "B905",  # ignore zip() without an explicit strict= parameter, only support with python >3.10
 ]
 
-[per-file-ignores]
-"tests/*.py" = ["ALL"]
-".github/*py" = ["INP001"]
+[tool.ruff.per-file-ignores]
+"tests/*.py" = ["D1"]
 
-[flake8-pytest-style]
-fixture-parentheses = false
-
-[pyupgrade]
-keep-runtime-typing = true
-
-[mccabe]
-max-complexity = 25
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+strict = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+show_error_codes = true
+implicit_reexport = true

@@ -5,7 +5,7 @@ import aiohttp
 from pyonwater import Account, Client
 
 
-async def main():
+async def main() -> None:
     account = Account(
         eow_hostname="eyeonwater.com",
         username="your EOW login",
