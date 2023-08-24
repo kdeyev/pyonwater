@@ -55,7 +55,7 @@ class Alerts(BaseModel):
     leak_alert: LeakAlert
 
 
-class Account(BaseModel):
+class AccountInfo(BaseModel):
     status: str
     first_name: str
     billing_address: str
@@ -131,7 +131,7 @@ class ActiveFlags(BaseModel):
     time: datetime
 
 
-class Meter(BaseModel):
+class MeterData(BaseModel):
     sensors_available: SensorsAvailable
     has_endpoint: bool
     install_date: datetime
@@ -351,8 +351,8 @@ class MeterInfo(BaseModel):
     service: Service
     location: Location
     alerts: Alerts
-    account: Account
-    meter: Meter
+    account: AccountInfo
+    meter: MeterData
     service_agreement: ServiceAgreement
     version: str
     user: User
