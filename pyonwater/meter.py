@@ -20,7 +20,7 @@ from .exceptions import (
     EyeOnWaterResponseIsEmpty,
 )
 from .meter_reader import MeterReader
-from .models import DataPoint, MeterInfo, ReadingData, ReadingDataFlags
+from .models import DataPoint, MeterInfo, Reading, Flags
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -36,9 +36,6 @@ MEASUREMENT_CCF = "CCF"
 MEASUREMENT_KILOGALLONS = "KGAL"
 MEASUREMENT_CUBICMETERS = ["CM", "CUBIC_METER"]
 
-METER_UUID_FIELD = "meter_uuid"
-READ_UNITS_FIELD = "units"
-READ_AMOUNT_FIELD = "full_read"
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -52,7 +49,7 @@ class Meter:
         self.reader = reader
         self.meter_info: MeterInfo | None = None
         self.last_historical_data: list[DataPoint] = []
-        self.reading_data: ReadingData | None = None
+        self.reading_data: Reading | None = None
 
     @property
     def meter_uuid(self) -> str:
@@ -66,7 +63,7 @@ class Meter:
         """Triggers an on-demand meter read and returns it when complete."""
 
         self.meter_info = await self.reader.read_meter(client)
-        self.reading_data = self.meter_info.reading_data
+        self.reading_data = self.meter_info.reading
 
         try:
             # TODO: identify missing days and request only missing dates.
@@ -96,18 +93,15 @@ class Meter:
         """Define attributes."""
         return self.meter_info
 
-    def get_flags(self, flag) -> ReadingDataFlags:
+    def get_flags(self, flag) -> Flags:
         """Define flags."""
         return self.reading_data.flags
 
     @property
     def reading(self) -> float:
         """Returns the latest meter reading in gal."""
-        reading = self.reading_data["latest_read"]
-        if READ_UNITS_FIELD not in reading:
-            msg = "Cannot find read units in reading data"
-            raise EyeOnWaterAPIError(msg)
-        read_unit = reading[READ_UNITS_FIELD]
+        reading = self.reading_data.latest_read
+        read_unit = reading.units
         read_unit_upper = read_unit.upper()
-        amount = float(reading[READ_AMOUNT_FIELD])
+        amount = float(reading.full_read)
         return self.reader.convert(read_unit_upper, amount)

@@ -19,7 +19,8 @@ from .exceptions import (
     EyeOnWaterRateLimitError,
     EyeOnWaterResponseIsEmpty,
 )
-from .models import DataPoint, MeterInfo, ReadingData, ReadingDataFlags
+from .models import MeterInfo, DataPoint
+from pydantic import BaseModel, ValidationError
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -73,9 +74,11 @@ class MeterReader:
             msg = "More than one meter reading found"
             raise Exception(msg)
 
-        ReadingDataFlags.parse_obj(meters[0]["_source"]["register_0"]["flags"])
-        ReadingData.parse_obj(meters[0]["_source"]["register_0"])
-        meter_info = MeterInfo.parse_obj(meters[0]["_source"])
+        try:
+            meter_info = MeterInfo.parse_obj(meters[0]["_source"])
+        except ValidationError as e:
+            msg = f"Unexpected EOW response {e}"
+            raise EyeOnWaterAPIError(msg)
 
         return meter_info
 
