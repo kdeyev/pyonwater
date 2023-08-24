@@ -4,12 +4,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from .client import Client
 from .exceptions import EyeOnWaterException, EyeOnWaterResponseIsEmpty
-from .meter_reader import MeterReader
-from .models import DataPoint, Flags, MeterInfo, Reading
 
 if TYPE_CHECKING:
+    from .client import Client
+    from .meter_reader import MeterReader
+    from .models import DataPoint, MeterInfo, Reading
+
     pass
 
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
@@ -33,25 +34,25 @@ class Meter:
     def __init__(self, reader: MeterReader) -> None:
         """Initialize the meter."""
         self.reader = reader
-        self.meter_info: MeterInfo | None = None
         self.last_historical_data: list[DataPoint] = []
-        self.reading_data: Reading | None = None
+
+        self._reading_data: Reading | None = None
+        self._meter_info: MeterInfo | None = None
 
     @property
     def meter_uuid(self) -> str:
-        """Return meter UUID"""
+        """Return meter UUID."""
         return self.reader.meter_uuid
 
     @property
     def meter_id(self) -> str:
-        """Return meter ID"""
+        """Return meter ID."""
         return self.reader.meter_id
 
     async def read_meter(self, client: Client, days_to_load: int = 3) -> None:
         """Triggers an on-demand meter read and returns it when complete."""
-
-        self.meter_info = await self.reader.read_meter(client)
-        self.reading_data = self.meter_info.reading
+        self._meter_info = await self.reader.read_meter(client)
+        self._reading_data = self._meter_info.reading
 
         try:
             # TODO: identify missing days and request only missing dates.
@@ -77,23 +78,18 @@ class Meter:
             self.last_historical_data = []
 
     @property
-    def attributes(self) -> MeterInfo:
-        """Define attributes."""
-        if not self.meter_info:
-            raise EyeOnWaterException("Data was not fetched")
-        return self.meter_info
-
-    @property
-    def flags(self) -> Flags:
-        """Define flags."""
-        if not self.reading_data:
-            raise EyeOnWaterException("Data was not fetched")
-        return self.reading_data.flags
+    def meter_info(self) -> MeterInfo:
+        """Return MeterInfo."""
+        if not self._meter_info:
+            msg = "Data was not fetched"
+            raise EyeOnWaterException(msg)
+        return self._meter_info
 
     @property
     def reading(self) -> float:
-        """Returns the latest meter reading in gal."""
-        if not self.reading_data:
-            raise EyeOnWaterException("Data was not fetched")
-        reading = self.reading_data.latest_read
+        """Returns the latest meter reading in me^3 or gal."""
+        if not self._reading_data:
+            msg = "Data was not fetched"
+            raise EyeOnWaterException(msg)
+        reading = self._reading_data.latest_read
         return self.reader.convert(reading.units, reading.full_read)

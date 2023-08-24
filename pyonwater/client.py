@@ -10,6 +10,7 @@ from tenacity import retry, retry_if_exception_type
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
+
     from .account import Account
 
 from .exceptions import (
