@@ -1,4 +1,4 @@
-"""Supported EOW units"""
+"""Supported EOW units."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from enum import Enum
 
 
 class EOWUnits(str, Enum):
-    """Enum of supported EOW units"""
+    """Enum of supported EOW units."""
 
     MEASUREMENT_GALLONS = "GAL"
     MEASUREMENT_100_GALLONS = "100 GAL"

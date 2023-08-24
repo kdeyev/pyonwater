@@ -4,12 +4,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from .client import Client
 from .exceptions import EyeOnWaterException, EyeOnWaterResponseIsEmpty
-from .meter_reader import MeterReader
-from .models import DataPoint, Flags, MeterInfo, Reading
 
 if TYPE_CHECKING:
+    from .client import Client
+    from .meter_reader import MeterReader
+    from .models import DataPoint, Flags, MeterInfo, Reading
+
     pass
 
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
@@ -39,17 +40,16 @@ class Meter:
 
     @property
     def meter_uuid(self) -> str:
-        """Return meter UUID"""
+        """Return meter UUID."""
         return self.reader.meter_uuid
 
     @property
     def meter_id(self) -> str:
-        """Return meter ID"""
+        """Return meter ID."""
         return self.reader.meter_id
 
     async def read_meter(self, client: Client, days_to_load: int = 3) -> None:
         """Triggers an on-demand meter read and returns it when complete."""
-
         self.meter_info = await self.reader.read_meter(client)
         self.reading_data = self.meter_info.reading
 
@@ -80,20 +80,23 @@ class Meter:
     def attributes(self) -> MeterInfo:
         """Define attributes."""
         if not self.meter_info:
-            raise EyeOnWaterException("Data was not fetched")
+            msg = "Data was not fetched"
+            raise EyeOnWaterException(msg)
         return self.meter_info
 
     @property
     def flags(self) -> Flags:
         """Define flags."""
         if not self.reading_data:
-            raise EyeOnWaterException("Data was not fetched")
+            msg = "Data was not fetched"
+            raise EyeOnWaterException(msg)
         return self.reading_data.flags
 
     @property
     def reading(self) -> float:
         """Returns the latest meter reading in gal."""
         if not self.reading_data:
-            raise EyeOnWaterException("Data was not fetched")
+            msg = "Data was not fetched"
+            raise EyeOnWaterException(msg)
         reading = self.reading_data.latest_read
         return self.reader.convert(reading.units, reading.full_read)

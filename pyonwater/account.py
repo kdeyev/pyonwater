@@ -1,12 +1,15 @@
 """EyeOnWater API integration."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 import urllib.parse
 
-from .client import Client
 from .exceptions import EyeOnWaterAPIError
 from .meter import Meter
 from .meter_reader import MeterReader
+
+if TYPE_CHECKING:
+    from .client import Client
 
 DASHBOARD_ENDPOINT = "/dashboard/"
 METER_UUID_FIELD = "meter_uuid"

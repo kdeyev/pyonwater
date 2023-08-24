@@ -1,4 +1,4 @@
-"""Example shoing the EOW Client usage"""
+"""Example shoing the EOW Client usage."""
 
 import asyncio
 
@@ -8,7 +8,7 @@ from pyonwater import Account, Client
 
 
 async def main() -> None:
-    """Main"""
+    """Main."""
     account = Account(
         eow_hostname="eyeonwater.com",
         username="your EOW login",

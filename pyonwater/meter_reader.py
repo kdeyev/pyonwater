@@ -9,11 +9,12 @@ from typing import TYPE_CHECKING, Any
 from pydantic import ValidationError
 import pytz
 
-from .client import Client
 from .exceptions import EyeOnWaterAPIError, EyeOnWaterResponseIsEmpty
 from .models import DataPoint, EOWUnits, HistoricalData, MeterInfo
 
 if TYPE_CHECKING:
+    from .client import Client
+
     pass
 
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
@@ -94,7 +95,9 @@ class MeterReader:
         return amount
 
     async def read_historical_data(
-        self, client: Client, days_to_load: int
+        self,
+        client: Client,
+        days_to_load: int,
     ) -> list[DataPoint]:
         """Retrieve historical data for today and past N days."""
         today = datetime.datetime.now().replace(
@@ -119,7 +122,8 @@ class MeterReader:
             )
             try:
                 statistics += await self.read_historical_data_one_day(
-                    date=date, client=client
+                    date=date,
+                    client=client,
                 )
             except EyeOnWaterResponseIsEmpty:
                 continue
@@ -127,7 +131,9 @@ class MeterReader:
         return statistics
 
     async def read_historical_data_one_day(
-        self, client: Client, date: datetime.datetime
+        self,
+        client: Client,
+        date: datetime.datetime,
     ) -> list[DataPoint]:
         """Retrieve the historical hourly water readings for a requested day."""
         if self.metric_measurement_system:
@@ -178,7 +184,7 @@ class MeterReader:
                 DataPoint(
                     dt=timezone.localize(d.date),
                     reading=self.convert(response_unit, d.bill_read),
-                )
+                ),
             )
 
         statistics.sort(key=lambda d: d.dt)
