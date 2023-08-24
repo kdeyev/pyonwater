@@ -1,3 +1,5 @@
+"""Example shoing the EOW Client usage"""
+
 import asyncio
 
 import aiohttp
@@ -5,7 +7,8 @@ import aiohttp
 from pyonwater import Account, Client
 
 
-async def main():
+async def main() -> None:
+    """Main"""
     account = Account(
         eow_hostname="eyeonwater.com",
         username="your EOW login",
@@ -25,7 +28,7 @@ async def main():
         print(f"meter {meter.meter_uuid} info {meter.meter_info}")
 
         for d in meter.last_historical_data:
-            print(str(d["dt"]), d["reading"])
+            print(str(d.dt), d.reading)
 
     await websession.close()
 
