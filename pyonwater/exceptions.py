@@ -1,3 +1,6 @@
+"""Exceptions of EOW Client."""
+
+
 class EyeOnWaterException(Exception):
     """Base exception for more specific exceptions to inherit from."""
 

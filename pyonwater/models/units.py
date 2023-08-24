@@ -1,9 +1,13 @@
+"""Supported EOW units"""
+
 from __future__ import annotations
 
 from enum import Enum
 
 
-class Units(str, Enum):
+class EOWUnits(str, Enum):
+    """Enum of supported EOW units"""
+
     MEASUREMENT_GALLONS = "GAL"
     MEASUREMENT_100_GALLONS = "100 GAL"
     MEASUREMENT_10_GALLONS = "10 GAL"

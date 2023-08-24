@@ -5,10 +5,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from .client import Client
-from .eow_models import Flags, MeterInfo, Reading
 from .exceptions import EyeOnWaterException, EyeOnWaterResponseIsEmpty
 from .meter_reader import MeterReader
-from .models import DataPoint
+from .models import DataPoint, Flags, MeterInfo, Reading
 
 if TYPE_CHECKING:
     pass
@@ -40,10 +39,12 @@ class Meter:
 
     @property
     def meter_uuid(self) -> str:
+        """Return meter UUID"""
         return self.reader.meter_uuid
 
     @property
     def meter_id(self) -> str:
+        """Return meter ID"""
         return self.reader.meter_id
 
     async def read_meter(self, client: Client, days_to_load: int = 3) -> None:

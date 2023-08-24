@@ -10,11 +10,8 @@ from pydantic import ValidationError
 import pytz
 
 from .client import Client
-from .eow_historical_models import HistoricalData
-from .eow_models import MeterInfo
 from .exceptions import EyeOnWaterAPIError, EyeOnWaterResponseIsEmpty
-from .models import DataPoint
-from .units import Units
+from .models import DataPoint, EOWUnits, HistoricalData, MeterInfo
 
 if TYPE_CHECKING:
     pass
@@ -63,10 +60,10 @@ class MeterReader:
 
         return meter_info
 
-    def convert(self, read_unit: Units, amount: float) -> float:
+    def convert(self, read_unit: EOWUnits, amount: float) -> float:
         """Convert reading to Cubic Meter or Gallons."""
         if self.metric_measurement_system:
-            if read_unit in [Units.MEASUREMENT_CUBICMETERS, Units.MEASUREMENT_CM]:
+            if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
                 pass
             else:
                 msg = f"Unsupported measurement unit: {read_unit}"
@@ -74,17 +71,20 @@ class MeterReader:
                     msg,
                 )
         else:
-            if read_unit == Units.MEASUREMENT_KILOGALLONS:
+            if read_unit == EOWUnits.MEASUREMENT_KILOGALLONS:
                 amount = amount * 1000
-            elif read_unit == Units.MEASUREMENT_100_GALLONS:
+            elif read_unit == EOWUnits.MEASUREMENT_100_GALLONS:
                 amount = amount * 100
-            elif read_unit == Units.MEASUREMENT_10_GALLONS:
+            elif read_unit == EOWUnits.MEASUREMENT_10_GALLONS:
                 amount = amount * 10
-            elif read_unit == Units.MEASUREMENT_GALLONS:
+            elif read_unit == EOWUnits.MEASUREMENT_GALLONS:
                 pass
-            elif read_unit == Units.MEASUREMENT_CCF:
+            elif read_unit == EOWUnits.MEASUREMENT_CCF:
                 amount = amount * 748.052
-            elif read_unit in [Units.MEASUREMENT_CCF, Units.MEASUREMENT_CUBIC_FEET]:
+            elif read_unit in [
+                EOWUnits.MEASUREMENT_CCF,
+                EOWUnits.MEASUREMENT_CUBIC_FEET,
+            ]:
                 amount = amount * 7.48052
             else:
                 msg = f"Unsupported measurement unit: {read_unit}"

@@ -1,10 +1,12 @@
+# ruff: noqa
+
 from __future__ import annotations
 
 from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from .units import Units
+from .units import EOWUnits
 
 
 class Register0EncoderItem(BaseModel):
@@ -46,7 +48,7 @@ class Params(BaseModel):
     aggregate: str
     aggregate_group: str
     perspective: str
-    units: Units
+    units: EOWUnits
     start_date_tz: str
     adjust_to: bool
     combine_group: bool
@@ -55,7 +57,7 @@ class Params(BaseModel):
 class Series(BaseModel):
     bill_read: float
     end_date: datetime
-    display_unit: Units
+    display_unit: EOWUnits
     meter_uuid: int
     value: float
     start_date: datetime
@@ -63,7 +65,7 @@ class Series(BaseModel):
     register_number: int
     estimated: int
     raw_read: int
-    unit: Units
+    unit: EOWUnits
 
 
 class Legend(BaseModel):

@@ -1,3 +1,5 @@
+# ruff: noqa
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -5,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .units import Units
+from .units import EOWUnits
 
 
 class Service(BaseModel):
@@ -187,11 +189,11 @@ class ServiceAgreement(BaseModel):
 
 class LatestRead(BaseModel):
     bill_read: str
-    bill_display_units: Units
+    bill_display_units: EOWUnits
     full_read: float
     read_time: datetime
     has_endpoints: bool
-    units: Units
+    units: EOWUnits
     method: str
 
 
@@ -255,7 +257,7 @@ class Reading(BaseModel):
     communication_security: str
     meter_size_desc: str
     barnacle_uuid: str
-    unit: Units
+    unit: EOWUnits
     customer_name: str
     cell_type: str
     pi_status: str
