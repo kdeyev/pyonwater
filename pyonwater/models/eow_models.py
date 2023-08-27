@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -11,353 +11,390 @@ from .units import EOWUnits
 
 
 class Service(BaseModel):
-    class_code_normalized: str
-    route: str
-    active: bool
-    class_code: str
-    service_type: str
-    service_id: str
-    start_date: datetime
-    service_point_uuid: str
-    cycle: str
+    # Optional fields
+    class_code_normalized: Optional[str] = None
+    route: Optional[str] = None
+    active: Optional[bool] = None
+    class_code: Optional[str] = None
+    service_type: Optional[str] = None
+    service_id: Optional[str] = None
+    start_date: Optional[datetime] = None
+    service_point_uuid: Optional[str] = None
+    cycle: Optional[str] = None
 
 
 class Location(BaseModel):
-    city: str
-    parcel_number: str
-    location_name: str
-    parity: str
-    country: str
-    route: str
-    geocode_status: int
-    zip_code: str
-    longitude: str
-    display_address_3: str
-    state: str
-    location_uuid: str
-    county_name: str
-    latitude: str
-    display_address_2: str
-    location_id: str
-    display_address: str
-    display_street_name: str
-    cycle: str
+    # Optional fields
+    city: Optional[str] = None
+    parcel_number: Optional[str] = None
+    location_name: Optional[str] = None
+    parity: Optional[str] = None
+    country: Optional[str] = None
+    route: Optional[str] = None
+    geocode_status: Optional[int] = None
+    zip_code: Optional[str] = None
+    longitude: Optional[str] = None
+    display_address_3: Optional[str] = None
+    state: Optional[str] = None
+    location_uuid: Optional[str] = None
+    county_name: Optional[str] = None
+    latitude: Optional[str] = None
+    display_address_2: Optional[str] = None
+    location_id: Optional[str] = None
+    display_address: Optional[str] = None
+    display_street_name: Optional[str] = None
+    cycle: Optional[str] = None
 
 
 class LeakAlert(BaseModel):
-    alert_type: str
-    name: str
-    residential_user_name: str
+    # Optional fields
+    alert_type: Optional[str] = None
+    name: Optional[str] = None
+    residential_user_name: Optional[str] = None
     date_updated: Any
-    alert_uuid: str
-    state: str
-    date_created: str
-    creator_user_uuid: str
+    alert_uuid: Optional[str] = None
+    state: Optional[str] = None
+    date_created: Optional[str] = None
+    creator_user_uuid: Optional[str] = None
 
 
 class Alerts(BaseModel):
-    leak_alert: LeakAlert
+    # Optional fields
+    leak_alert: Optional[LeakAlert] = None
 
 
 class AccountInfo(BaseModel):
-    status: str
-    first_name: str
-    billing_address: str
-    billing_city: str
-    account_uuid: str
-    billing_address_2: str
-    full_name: str
-    email: str
-    phone: str
-    portal_status: str
-    last_name: str
-    account_id: str
-    class_code: str
-    billing_address_3: str
-    person_id: str
-    date_created: str
-    account_billing_cycle: str
-    billing_zip_code: str
-    billing_country: str
-    billing_state: str
-    eyeonwater: str
+    # Optional fields
+    status: Optional[str] = None
+    first_name: Optional[str] = None
+    billing_address: Optional[str] = None
+    billing_city: Optional[str] = None
+    account_uuid: Optional[str] = None
+    billing_address_2: Optional[str] = None
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    portal_status: Optional[str] = None
+    last_name: Optional[str] = None
+    account_id: Optional[str] = None
+    class_code: Optional[str] = None
+    billing_address_3: Optional[str] = None
+    person_id: Optional[str] = None
+    date_created: Optional[str] = None
+    account_billing_cycle: Optional[str] = None
+    billing_zip_code: Optional[str] = None
+    billing_country: Optional[str] = None
+    billing_state: Optional[str] = None
+    eyeonwater: Optional[str] = None
 
 
 class SensorsAvailable(BaseModel):
-    types: list[str]
+    # Optional fields
+    types: Optional[list[str]] = None
 
 
 class Battery(BaseModel):
-    register_: int = Field(..., alias="register")
-    level: int
-    quality: str
-    thresh12mo: int
-    time: datetime
+    # Optional fields
+    register_: Optional[int] = Field(None, alias="register")
+    level: Optional[int] = None
+    quality: Optional[str] = None
+    thresh12mo: Optional[int] = None
+    time: Optional[datetime] = None
 
 
 class Pwr(BaseModel):
-    level: int
-    register_: int = Field(..., alias="register")
-    signal_7days: int
-    signal_strength: int
-    time: datetime
-    quality: str
-    signal_30days: int
+    # Optional fields
+    level: Optional[int] = None
+    register_: Optional[int] = Field(None, alias="register")
+    signal_7days: Optional[int] = None
+    signal_strength: Optional[int] = None
+    time: Optional[datetime] = None
+    quality: Optional[str] = None
+    signal_30days: Optional[int] = None
 
 
 class Notes(BaseModel):
-    count: int
+    # Optional fields
+    count: Optional[int] = None
 
 
 class Flow(BaseModel):
-    this_week: float
-    months_updated: str
-    last_month: float
-    last_year_last_month_ratio: float
-    last_year_last_month: float
-    delta_positive: float
-    time: datetime
-    time_positive: str
-    last_month_ratio: float
-    last_week_avg: float
-    last_year_this_month_ratio: float
-    delta: float
-    this_month: float
-    week_ratio: float
-    weeks_updated: str
-    last_year_this_month: float
-    last_week: float
-    this_week_avg: float
+    # Optional fields
+    this_week: Optional[float] = None
+    months_updated: Optional[str] = None
+    last_month: Optional[float] = None
+    last_year_last_month_ratio: Optional[float] = None
+    last_year_last_month: Optional[float] = None
+    delta_positive: Optional[float] = None
+    time: Optional[datetime] = None
+    time_positive: Optional[str] = None
+    last_month_ratio: Optional[float] = None
+    last_week_avg: Optional[float] = None
+    last_year_this_month_ratio: Optional[float] = None
+    delta: Optional[float] = None
+    this_month: Optional[float] = None
+    week_ratio: Optional[float] = None
+    weeks_updated: Optional[str] = None
+    last_year_this_month: Optional[float] = None
+    last_week: Optional[float] = None
+    this_week_avg: Optional[float] = None
 
 
 class ActiveFlags(BaseModel):
-    active_flags: list[str]
-    time: datetime
+    # Optional fields
+    active_flags: Optional[list[str]] = None
+    time: Optional[datetime] = None
 
 
 class MeterData(BaseModel):
-    sensors_available: SensorsAvailable
-    has_endpoint: bool
-    install_date: datetime
-    meter_uuid: str
-    fluid_type: str
-    timezone: str
-    firmware_version: str
-    communication_security: str
-    meter_size_unit: str
-    cell_type: str
-    geocode_status: int
-    geo: str
-    last_read_time: datetime
-    note: str
-    battery: Battery
-    endpoint_status: str
-    alert_code: int
-    gas_pressure_compensation: float
-    service_type: str
-    serial_number: str
-    type_: str = Field(..., alias="type")
-    pwr: Pwr
-    endpoint_connector: str
-    communication_seconds: int
-    meter_size_desc: str
-    is_compound: str
-    latitude: str
-    typical_read_method: str
-    endpoint_type: str
-    meter_id: str
-    last_communication_time: datetime
-    pit_type: str
-    meter_spec_uuid: str
-    manufacturer: str
-    has_valve: bool
-    has_sensor: bool
-    gas_sub_count: int
-    notes: Notes
-    meter_size: float
-    flow: Flow
-    longitude: str
-    flags: ActiveFlags
-    model: str
-    sequence_number: int
+    # Optional fields
+    sensors_available: Optional[SensorsAvailable] = None
+    has_endpoint: Optional[bool] = None
+    install_date: Optional[datetime] = None
+    meter_uuid: Optional[str] = None
+    fluid_type: Optional[str] = None
+    timezone: Optional[str] = None
+    firmware_version: Optional[str] = None
+    communication_security: Optional[str] = None
+    meter_size_unit: Optional[str] = None
+    cell_type: Optional[str] = None
+    geocode_status: Optional[int] = None
+    geo: Optional[str] = None
+    last_read_time: Optional[datetime] = None
+    note: Optional[str] = None
+    battery: Optional[Battery] = None
+    endpoint_status: Optional[str] = None
+    alert_code: Optional[int] = None
+    gas_pressure_compensation: Optional[float] = None
+    service_type: Optional[str] = None
+    serial_number: Optional[str] = None
+    type_: Optional[str] = Field(None, alias="type")
+    pwr: Optional[Pwr] = None
+    endpoint_connector: Optional[str] = None
+    communication_seconds: Optional[int] = None
+    meter_size_desc: Optional[str] = None
+    is_compound: Optional[str] = None
+    latitude: Optional[str] = None
+    typical_read_method: Optional[str] = None
+    endpoint_type: Optional[str] = None
+    meter_id: Optional[str] = None
+    last_communication_time: Optional[datetime] = None
+    pit_type: Optional[str] = None
+    meter_spec_uuid: Optional[str] = None
+    manufacturer: Optional[str] = None
+    has_valve: Optional[bool] = None
+    has_sensor: Optional[bool] = None
+    gas_sub_count: Optional[int] = None
+    notes: Optional[Notes] = None
+    meter_size: Optional[float] = None
+    flow: Optional[Flow] = None
+    longitude: Optional[str] = None
+    flags: Optional[ActiveFlags] = None
+    model: Optional[str] = None
+    sequence_number: Optional[int] = None
 
 
 class ServiceAgreement(BaseModel):
-    service_agreement_uuid: str
-    start_date: datetime
+    # Optional fields
+    service_agreement_uuid: Optional[str] = None
+    start_date: Optional[datetime] = None
 
 
 class LatestRead(BaseModel):
-    bill_read: str
-    bill_display_units: EOWUnits
+    # Mandatory fields
     full_read: float
-    read_time: datetime
-    has_endpoints: bool
     units: EOWUnits
-    method: str
+
+    # Optional fields
+    bill_read: Optional[str] = None
+    bill_display_units: Optional[EOWUnits] = None
+    read_time: Optional[datetime] = None
+    has_endpoints: Optional[bool] = None
+    method: Optional[str] = None
 
 
 class Timeslots(BaseModel):
-    weekend: list[int]
-    weekday: list[int]
+    # Optional fields
+    weekend: Optional[list[int]] = None
+    weekday: Optional[list[int]] = None
 
 
 class Encoder(BaseModel):
-    time: datetime
-    dials: int
-    register_id: str
-    totalizer: int
+    # Optional fields
+    time: Optional[datetime] = None
+    dials: Optional[int] = None
+    register_id: Optional[str] = None
+    totalizer: Optional[int] = None
 
 
 class Flags(BaseModel):
-    forced: bool = Field(..., alias="Forced")
-    magnetic_tamper: bool = Field(..., alias="MagneticTamper")
+    # Mandatory fields (used by EOW HA integration)
     empty_pipe: bool = Field(..., alias="EmptyPipe")
     leak: bool = Field(..., alias="Leak")
-    encoder_no_usage: bool = Field(..., alias="EncoderNoUsage")
-    encoder_temperature: bool = Field(..., alias="EncoderTemperature")
-    encoder_reverse_flow: bool = Field(..., alias="EncoderReverseFlow")
-    reading_changed: bool = Field(..., alias="ReadingChanged")
     cover_removed: bool = Field(..., alias="CoverRemoved")
-    programming_changed: bool = Field(..., alias="ProgrammingChanged")
-    encoder_exceeding_max_flow: bool = Field(..., alias="EncoderExceedingMaxFlow")
-    water_temperature_sensor_error: bool = Field(
-        ..., alias="WaterTemperatureSensorError"
-    )
-    oscillator_failure: bool = Field(..., alias="OscillatorFailure")
-    encoder_sensor_error: bool = Field(..., alias="EncoderSensorError")
     tamper: bool = Field(..., alias="Tamper")
     reverse_flow: bool = Field(..., alias="ReverseFlow")
-    encoder_leak: bool = Field(..., alias="EncoderLeak")
     low_battery: bool = Field(..., alias="LowBattery")
-    water_pressure_sensor_error: bool = Field(..., alias="WaterPressureSensorError")
-    min_max_invalid: bool = Field(..., alias="MinMaxInvalid")
-    end_of_life: bool = Field(..., alias="EndOfLife")
-    encoder_dial_change: bool = Field(..., alias="EncoderDialChange")
-    no_usage: bool = Field(..., alias="NoUsage")
     battery_charging: bool = Field(..., alias="BatteryCharging")
-    device_alert: bool = Field(..., alias="DeviceAlert")
-    endpoint_reading_missed: bool = Field(..., alias="EndpointReadingMissed")
-    encoder_removal: bool = Field(..., alias="EncoderRemoval")
-    profile_read_error: bool = Field(..., alias="ProfileReadError")
-    encoder_programmed: bool = Field(..., alias="EncoderProgrammed")
-    time: datetime
-    encoder_magnetic_tamper: bool = Field(..., alias="EncoderMagneticTamper")
-    meter_temperature_sensor_error: bool = Field(
-        ..., alias="MeterTemperatureSensorError"
+
+    # Optional fields
+    forced: Optional[bool] = Field(None, alias="Forced")
+    magnetic_tamper: Optional[bool] = Field(None, alias="MagneticTamper")
+    encoder_no_usage: Optional[bool] = Field(None, alias="EncoderNoUsage")
+    encoder_temperature: Optional[bool] = Field(None, alias="EncoderTemperature")
+    encoder_reverse_flow: Optional[bool] = Field(None, alias="EncoderReverseFlow")
+    reading_changed: Optional[bool] = Field(None, alias="ReadingChanged")
+    programming_changed: Optional[bool] = Field(None, alias="ProgrammingChanged")
+    encoder_exceeding_max_flow: Optional[bool] = Field(
+        None, alias="EncoderExceedingMaxFlow"
+    )
+    water_temperature_sensor_error: Optional[bool] = Field(
+        None, alias="WaterTemperatureSensorError"
+    )
+    oscillator_failure: Optional[bool] = Field(None, alias="OscillatorFailure")
+    encoder_sensor_error: Optional[bool] = Field(None, alias="EncoderSensorError")
+    encoder_leak: Optional[bool] = Field(None, alias="EncoderLeak")
+    water_pressure_sensor_error: Optional[bool] = Field(
+        None, alias="WaterPressureSensorError"
+    )
+    min_max_invalid: Optional[bool] = Field(None, alias="MinMaxInvalid")
+    end_of_life: Optional[bool] = Field(None, alias="EndOfLife")
+    encoder_dial_change: Optional[bool] = Field(None, alias="EncoderDialChange")
+    no_usage: Optional[bool] = Field(None, alias="NoUsage")
+    device_alert: Optional[bool] = Field(None, alias="DeviceAlert")
+    endpoint_reading_missed: Optional[bool] = Field(None, alias="EndpointReadingMissed")
+    encoder_removal: Optional[bool] = Field(None, alias="EncoderRemoval")
+    profile_read_error: Optional[bool] = Field(None, alias="ProfileReadError")
+    encoder_programmed: Optional[bool] = Field(None, alias="EncoderProgrammed")
+    time: Optional[datetime] = None
+    encoder_magnetic_tamper: Optional[bool] = Field(None, alias="EncoderMagneticTamper")
+    meter_temperature_sensor_error: Optional[bool] = Field(
+        None, alias="MeterTemperatureSensorError"
     )
 
 
 class Reading(BaseModel):
-    battery: Battery
-    customer_uuid: str
-    aggregation_seconds: int
-    last_communication_time: datetime
-    firmware_version: str
-    communication_security: str
-    meter_size_desc: str
-    barnacle_uuid: str
-    unit: EOWUnits
-    customer_name: str
-    cell_type: str
-    pi_status: str
-    second_carrier: bool
-    latest_read: LatestRead
-    input_config: str
-    meter_size_unit: str
-    endpoint_status: str
-    gas_pressure_compensation: float
-    serial_number: str
-    activated_on: str
-    sim_vendor: str
-    pwr: Pwr
-    communication_seconds: int
-    cell_endpoint_name: str
-    rf_communication: bool
-    low_read_limit: int
-    utility_use_1: str
-    timeslots: Timeslots
-    encoder: Encoder
-    endpoint_type: str
-    utility_use_2: str
-    multiplier: str
-    sim_type: str
-    register_number: str
-    wired_interface: str
-    endpoint_install_date: datetime
-    high_read_limit: int
-    gas_sub_count: int
-    billing_number: str
-    meter_size: float
-    flow: Flow
-    hardware_version: str
-    connector_type: str
+    # Mandatory fields
     flags: Flags
-    model: str
-    resolution: float
+    latest_read: LatestRead
+
+    # Optional fields
+    battery: Optional[Battery] = None
+    customer_uuid: Optional[str] = None
+    aggregation_seconds: Optional[int] = None
+    last_communication_time: Optional[datetime] = None
+    firmware_version: Optional[str] = None
+    communication_security: Optional[str] = None
+    meter_size_desc: Optional[str] = None
+    barnacle_uuid: Optional[str] = None
+    unit: Optional[EOWUnits] = None
+    customer_name: Optional[str] = None
+    cell_type: Optional[str] = None
+    pi_status: Optional[str] = None
+    second_carrier: Optional[bool] = None
+    input_config: Optional[str] = None
+    meter_size_unit: Optional[str] = None
+    endpoint_status: Optional[str] = None
+    gas_pressure_compensation: Optional[float] = None
+    serial_number: Optional[str] = None
+    activated_on: Optional[str] = None
+    sim_vendor: Optional[str] = None
+    pwr: Optional[Pwr] = None
+    communication_seconds: Optional[int] = None
+    cell_endpoint_name: Optional[str] = None
+    rf_communication: Optional[bool] = None
+    low_read_limit: Optional[int]
+    utility_use_1: Optional[str] = None
+    timeslots: Optional[Timeslots] = None
+    encoder: Optional[Encoder] = None
+    endpoint_type: Optional[str] = None
+    utility_use_2: Optional[str] = None
+    multiplier: Optional[str] = None
+    sim_type: Optional[str] = None
+    register_number: Optional[str] = None
+    wired_interface: Optional[str] = None
+    endpoint_install_date: Optional[datetime] = None
+    high_read_limit: Optional[int] = None
+    gas_sub_count: Optional[int] = None
+    billing_number: Optional[str] = None
+    meter_size: Optional[float] = None
+    flow: Optional[Flow] = None
+    hardware_version: Optional[str] = None
+    connector_type: Optional[str] = None
+    model: Optional[str] = None
+    resolution: Optional[float] = None
 
 
 class Conditions(BaseModel):
-    increasing: bool
-    decreasing: bool
+    # Optional fields
+    increasing: Optional[bool] = None
+    decreasing: Optional[bool] = None
 
 
 class EndpointTemperature(BaseModel):
-    latest_average: float
-    last_reported: str
-    seven_day_min: str
-    seven_day_average: str
-    seven_day_max: str
-    sensor_uuid: str
-    conditions: Conditions
+    # Optional fields
+    latest_average: Optional[float] = None
+    last_reported: Optional[str] = None
+    seven_day_min: Optional[str] = None
+    seven_day_average: Optional[str] = None
+    seven_day_max: Optional[str] = None
+    sensor_uuid: Optional[str] = None
+    conditions: Optional[Conditions] = None
 
 
 class Sensors(BaseModel):
-    endpoint_temperature: EndpointTemperature
+    # Optional fields
+    endpoint_temperature: Optional[EndpointTemperature] = None
 
 
 class Utility(BaseModel):
-    fluid_barrel_billing_unit: str
-    cm_billing_unit: str
-    cf_billing_unit: str
-    type_: str = Field(..., alias="type")
-    utility_name: str
-    eow_service_selector: str
-    gas_cf_billing_unit: str
-    eow_type: str
-    oil_barrel_billing_unit: str
-    date_created: str
-    gal_billing_unit: str
-    gas_cm_billing_unit: str
-    utility_uuid: str
-    imp_billing_unit: str
+    # Optional fields
+    fluid_barrel_billing_unit: Optional[str] = None
+    cm_billing_unit: Optional[str] = None
+    cf_billing_unit: Optional[str] = None
+    type_: Optional[str] = Field(None, alias="type")
+    utility_name: Optional[str] = None
+    eow_service_selector: Optional[str] = None
+    gas_cf_billing_unit: Optional[str] = None
+    eow_type: Optional[str] = None
+    oil_barrel_billing_unit: Optional[str] = None
+    date_created: Optional[str] = None
+    gal_billing_unit: Optional[str] = None
+    gas_cm_billing_unit: Optional[str] = None
+    utility_uuid: Optional[str] = None
+    imp_billing_unit: Optional[str] = None
 
 
 class User(BaseModel):
-    user_uuid: str
-    user_name: str
-    date_created: str
+    # Optional fields
+    user_uuid: Optional[str] = None
+    user_name: Optional[str] = None
+    date_created: Optional[str] = None
 
 
 class Groups(BaseModel):
-    irrigation: str
-    continuous_flow: str
-    is_irrigatable: str
-    disable_valve_shutoff: str
+    # Optional fields
+    irrigation: Optional[str] = None
+    continuous_flow: Optional[str] = None
+    is_irrigatable: Optional[str] = None
+    disable_valve_shutoff: Optional[str] = None
 
 
 class MeterInfo(BaseModel):
+    # Mandatory fields
     reading: Reading = Field(..., alias="register_0")
-    sensors: Sensors
-    utility: Utility
-    updated: int
-    last_updated: str
-    service: Service
-    location: Location
-    alerts: Alerts
-    account: AccountInfo
-    meter: MeterData
-    service_agreement: ServiceAgreement
-    version: str
-    user: User
-    groups: Groups
+
+    # Optional fields
+    sensors: Optional[Sensors] = None
+    utility: Optional[Utility] = None
+    updated: Optional[int] = None
+    last_updated: Optional[str] = None
+    service: Optional[Service] = None
+    location: Optional[Location] = None
+    alerts: Optional[Alerts] = None
+    account: Optional[AccountInfo] = None
+    meter: Optional[MeterData] = None
+    service_agreement: Optional[ServiceAgreement] = None
+    version: Optional[str] = None
+    user: Optional[User] = None
+    groups: Optional[Groups] = None

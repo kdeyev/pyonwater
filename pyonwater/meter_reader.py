@@ -61,7 +61,7 @@ class MeterReader:
 
         return meter_info
 
-    def convert(self, read_unit: EOWUnits, amount: float) -> float:
+    def convert(self, read_unit: str, amount: float) -> float:
         """Convert reading to Cubic Meter or Gallons."""
         if self.metric_measurement_system:
             if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
@@ -157,13 +157,13 @@ class MeterReader:
             },
             "query": {"query": {"terms": {"meter.meter_uuid": [self.meter_uuid]}}},
         }
-        data = await client.request(
+        raw_data = await client.request(
             path=CONSUMPTION_ENDPOINT,
             method="post",
             json=query,
         )
         try:
-            data = HistoricalData.parse_raw(data)
+            data = HistoricalData.parse_raw(raw_data)
         except ValidationError as e:
             msg = f"Unexpected EOW response {e}"
             raise EyeOnWaterAPIError(msg) from e
@@ -176,9 +176,9 @@ class MeterReader:
         timezones = data.hit.meter_timezone
         timezone = pytz.timezone(timezones[0])
 
-        data = data.timeseries[key].series
+        ts = data.timeseries[key].series
         statistics = []
-        for d in data:
+        for d in ts:
             response_unit = d.display_unit.upper()
             statistics.append(
                 DataPoint(
