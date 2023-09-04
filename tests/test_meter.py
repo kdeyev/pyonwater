@@ -60,6 +60,26 @@ def mock_historical_data(request):
         return web.Response(text=f.read())
 
 
+def mock_historical_nodata(request):
+    """Mock for historical datas request"""
+    with open("tests//mock/historical_data_mock_anonymized_nodata.json") as f:
+        return web.Response(text=f.read())
+
+
+def mock_historical_newerdata(request):
+    """Mock for historical datas request"""
+    with open("tests//mock/historical_data_mock_anonymized_newer_data.json") as f:
+        return web.Response(text=f.read())
+
+
+def mock_historical_newerdata_moredata(request):
+    """Mock for historical datas request"""
+    with open(
+        "tests//mock/historical_data_mock_anonymized_newer_data_moredata.json"
+    ) as f:
+        return web.Response(text=f.read())
+
+
 def mock_read_meter_custom_units(new_unit):
     def mock_read_meter(request):
         """Mock for read meter request"""
@@ -123,30 +143,37 @@ async def test_meter_expected_units(aiohttp_client, loop, metric, expected_units
     assert meter.native_unit_of_measurement == expected_units
 
 
-async def test_meter(aiohttp_client, loop):
-    """Basic pyonwater meter reader test"""
-    app = web.Application()
-
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
-    app.router.add_post("/api/2/residential/consumption", mock_historical_data)
-
-    websession = await aiohttp_client(app)
-
+async def build_client(websession, metric):
     account = Account(
         eow_hostname="",
         username="user",
         password="",
-        metric_measurement_system=False,
+        metric_measurement_system=metric,
     )
 
     client = Client(websession=websession, account=account)
     await client.authenticate()
+    return client
+
+
+async def test_meter(aiohttp_client, loop):
+    """Basic pyonwater meter reader test"""
+    metric = False
+
+    app = web.Application()
+
+    app.router.add_post("/account/signin", mock_signin)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
+    app.router.add_post("/api/2/residential/consumption", mock_historical_nodata)
+
+    websession = await aiohttp_client(app)
+
+    client = await build_client(websession, metric)
 
     meter_reader = MeterReader(
         meter_uuid="meter_uuid",
         meter_id="meter_id",
-        metric_measurement_system=account.metric_measurement_system,
+        metric_measurement_system=metric,
     )
 
     meter = Meter(meter_reader)
@@ -157,13 +184,49 @@ async def test_meter(aiohttp_client, loop):
     with pytest.raises(EyeOnWaterException):
         assert meter.meter_info
 
-    await meter.read_meter(client=client, days_to_load=0)
+    await meter.read_meter(client=client, days_to_load=1)
     assert meter.reading != 0
     assert meter.meter_info is not None
+
+    app = web.Application()
+
+    app.router.add_post("/account/signin", mock_signin)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
+    app.router.add_post("/api/2/residential/consumption", mock_historical_data)
+
+    websession = await aiohttp_client(app)
+
+    client = await build_client(websession, metric)
 
     await meter.read_meter(client=client, days_to_load=1)
     assert meter.reading != 0
     assert meter.meter_info is not None
+
+    app = web.Application()
+
+    app.router.add_post("/account/signin", mock_signin)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
+    app.router.add_post("/api/2/residential/consumption", mock_historical_newerdata)
+
+    websession = await aiohttp_client(app)
+
+    client = await build_client(websession, metric)
+
+    await meter.read_meter(client=client, days_to_load=1)
+    assert meter.reading != 0
+    assert meter.meter_info is not None
+
+    app = web.Application()
+
+    app.router.add_post("/account/signin", mock_signin)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
+    app.router.add_post(
+        "/api/2/residential/consumption", mock_historical_newerdata_moredata
+    )
+
+    websession = await aiohttp_client(app)
+
+    client = await build_client(websession, metric)
 
     await meter.read_meter(client=client, days_to_load=1)
     assert meter.reading != 0

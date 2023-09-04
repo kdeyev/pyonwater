@@ -12,7 +12,7 @@ import pytz
 from .exceptions import EyeOnWaterAPIError, EyeOnWaterResponseIsEmpty
 from .models import DataPoint, EOWUnits, HistoricalData, MeterInfo
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
 
     pass

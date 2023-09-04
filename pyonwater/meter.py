@@ -4,9 +4,9 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from .exceptions import EyeOnWaterException, EyeOnWaterResponseIsEmpty
+from .exceptions import EyeOnWaterException
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
     from .meter_reader import MeterReader
     from .models import DataPoint, MeterInfo, Reading
@@ -59,28 +59,24 @@ class Meter:
         self._meter_info = await self.reader.read_meter(client)
         self._reading_data = self._meter_info.reading
 
-        try:
-            # TODO: identify missing days and request only missing dates.
-            historical_data = await self.reader.read_historical_data(
-                days_to_load=days_to_load,
-                client=client,
-            )
-            if not self.last_historical_data:
-                self.last_historical_data = historical_data
-            elif (
-                historical_data
-                and historical_data[-1].dt > self.last_historical_data[-1].dt
-            ):
-                # Take newer data
-                self.last_historical_data = historical_data
-            elif historical_data[-1].reading == self.last_historical_data[
-                -1
-            ].reading and len(historical_data) > len(self.last_historical_data):
-                # If it the same date - take more data
-                self.last_historical_data = historical_data
-
-        except EyeOnWaterResponseIsEmpty:
-            self.last_historical_data = []
+        # TODO: identify missing days and request only missing dates.
+        historical_data = await self.reader.read_historical_data(
+            days_to_load=days_to_load,
+            client=client,
+        )
+        if not self.last_historical_data:
+            self.last_historical_data = historical_data
+        elif (
+            historical_data
+            and historical_data[-1].dt > self.last_historical_data[-1].dt
+        ):
+            # Take newer data
+            self.last_historical_data = historical_data
+        elif historical_data[-1].reading == self.last_historical_data[
+            -1
+        ].reading and len(historical_data) > len(self.last_historical_data):
+            # If it the same date - take more data
+            self.last_historical_data = historical_data
 
     @property
     def meter_info(self) -> MeterInfo:

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from tenacity import retry, retry_if_exception_type
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from aiohttp import ClientSession
 
     from .account import Account

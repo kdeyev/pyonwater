@@ -8,7 +8,7 @@ from .exceptions import EyeOnWaterAPIError
 from .meter import Meter
 from .meter_reader import MeterReader
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
 
 DASHBOARD_ENDPOINT = "/dashboard/"
