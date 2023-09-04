@@ -13,7 +13,7 @@ async def mock_signin(request):
 
 def mock_read_meter(request):
     """Mock for read meter request"""
-    with open("tests//mock/read_meter_mock.json") as f:
+    with open("tests//mock/read_meter_mock_anonymized..json") as f:
         return web.Response(text=f.read())
 
 
