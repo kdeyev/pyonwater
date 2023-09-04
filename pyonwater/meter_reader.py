@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 import pytz
@@ -29,12 +29,12 @@ class MeterReader:
     def __init__(
         self,
         meter_uuid: str,
-        meter_info: dict[str, Any],
+        meter_id: str,
         metric_measurement_system: bool,
     ) -> None:
         """Initialize the meter."""
         self.meter_uuid = meter_uuid
-        self.meter_id: str = meter_info["meter_id"]
+        self.meter_id: str = meter_id
 
         self.metric_measurement_system = metric_measurement_system
         self.native_unit_of_measurement = (

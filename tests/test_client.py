@@ -5,13 +5,13 @@ from aiohttp import web
 from pyonwater import Account, Client
 
 
-async def mock_signin(request):  # type: ignore
+async def mock_signin(request):
     """Mock for sign in HTTP call"""
     resp = web.Response(text="Hello, world", headers={"cookies": "key=val"})
     return resp
 
 
-def mock_get_meters(request):  # type: ignore
+def mock_get_meters(request):
     """Mock for get dashboard request"""
     data = """  AQ.Views.MeterPicker.meters = [{"display_address": "", "": "", "meter_uuid": "123", "meter_id": "456", "city": "", "location_name": "", "has_leak": false, "state": "", "serial_number": "789", "utility_uuid": "123", "page": 1, "zip_code": ""}];
             junk"""
@@ -20,7 +20,7 @@ def mock_get_meters(request):  # type: ignore
 
 
 # @pytest.mark.asyncio
-async def test_client(aiohttp_client, loop):  # type: ignore
+async def test_client(aiohttp_client, loop):
     """Basic pyonwater client test"""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin)
