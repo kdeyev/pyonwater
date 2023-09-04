@@ -85,7 +85,7 @@
        "install_date": "1990-01-27T00:00:00",
        "meter_uuid": "1111111111111111111",
        "fluid_type": "XXXXX",
-       "timezone": "XX/XXXXXXX",
+       "timezone": "US/Central",
        "firmware_version": "1.1.111",
        "communication_security": "XXXXXXX",
        "meter_size_unit": "XXXXXX",

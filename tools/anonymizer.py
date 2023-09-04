@@ -33,6 +33,10 @@ def traverse(data: Any) -> Any:  # noqa: C901
         for k in data:
             data[k] = traverse(data[k])
         return data
+    elif isinstance(data, list):
+        for i in range(len(data)):
+            data[i] = traverse(data[i])
+        return data
     elif isinstance(data, bool):
         return data
     elif isinstance(data, int):
@@ -52,10 +56,6 @@ def traverse(data: Any) -> Any:  # noqa: C901
             data = re.sub(r"[a-zA-Z]", "X", data)
             data = re.sub(r"[\d]", "1", data)
             return data
-    elif isinstance(data, list):
-        for i in range(len(data)):
-            data[i] = traverse(data[i])
-        return data
     else:
         return data
 
@@ -69,7 +69,7 @@ def main(argv: Any) -> None:
         data = json.load(f)
         data = traverse(data)
         filename, file_extension = os.path.splitext(input_path)
-        output_filename = f"{filename}_anonymized.{file_extension}"
+        output_filename = f"{filename}_anonymized{file_extension}"
 
         with open(output_filename, "w") as f:
             json.dump(data, f, indent=True)

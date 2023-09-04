@@ -83,7 +83,7 @@ class MeterReader:
             elif read_unit == EOWUnits.MEASUREMENT_CCF:
                 amount = amount * 748.052
             elif read_unit in [
-                EOWUnits.MEASUREMENT_CCF,
+                EOWUnits.MEASUREMENT_CF,
                 EOWUnits.MEASUREMENT_CUBIC_FEET,
             ]:
                 amount = amount * 7.48052
