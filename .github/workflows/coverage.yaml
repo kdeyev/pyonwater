@@ -52,8 +52,13 @@ jobs:
       - name: Test with pytest
         run: poetry run pytest --cov-fail-under=00 --cov=. --cov-report=xml  --cov-report=term
 
-      - name: Get Cover
-        uses: orgoro/coverage@v3.1
+    #   - name: Get Cover
+    #     uses: orgoro/coverage@v3.1
+    #     with:
+    #         coverageFile: coverage.xml
+    #         token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@main
         with:
-            coverageFile: coverage.xml
-            token: ${{ secrets.GITHUB_TOKEN }}
+            pytest-xml-coverage-path: ./coverage.xml
