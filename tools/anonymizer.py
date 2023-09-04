@@ -1,25 +1,57 @@
 """Simple JSON anonymization tool."""
+import datetime
 import json
 import os
 import re
 import sys
 from typing import Any
 
+from pyonwater.models import EOWUnits
 
-def traverse(data: Any) -> Any:
+
+def is_date(string: str, mask: str) -> bool:
+    """Verify is the string is pyonwater supported datetime"""
+    try:
+        datetime.datetime.strptime(string, mask)
+        return True
+    except ValueError:
+        return False
+
+
+def is_unit(string: str) -> bool:
+    """Verify is the string is pyonwater supported measurement unit"""
+    try:
+        EOWUnits(string)
+        return True
+    except ValueError:
+        return False
+
+
+def traverse(data: Any) -> Any:  # noqa: C901
     """Anonymize an entity"""
     if isinstance(data, dict):
         for k in data:
             data[k] = traverse(data[k])
+        return data
+    elif isinstance(data, bool):
         return data
     elif isinstance(data, int):
         return int("1" * len(str(data)))
     elif isinstance(data, float):
         return 42.0
     elif isinstance(data, str):
-        data = re.sub(r"[a-zA-Z]", "X", data)
-        data = re.sub(r"[\d]", "1", data)
-        return data
+        if is_date(data, "%Y-%m-%dT%H:%M:%S.%fZ"):
+            return datetime.datetime(1990, 1, 27, 0, 0).strftime(
+                "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
+        elif is_date(data, "%Y-%m-%dT%H:%M:%S"):
+            return datetime.datetime(1990, 1, 27, 0, 0).strftime("%Y-%m-%dT%H:%M:%S")
+        elif is_unit(data):
+            return data
+        else:
+            data = re.sub(r"[a-zA-Z]", "X", data)
+            data = re.sub(r"[\d]", "1", data)
+            return data
     elif isinstance(data, list):
         for i in range(len(data)):
             data[i] = traverse(data[i])
