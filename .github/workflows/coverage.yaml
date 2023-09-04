@@ -50,9 +50,4 @@ jobs:
       #    run test suite and output coverage file
       #----------------------------------------------
       - name: Test with pytest
-        run: poetry run pytest --cov=. --cov-report=xml
-
-      - name: Pytest coverage comment
-        uses: MishaKav/pytest-coverage-comment@main
-        with:
-          pytest-xml-coverage-path: ./coverage.xml
+        run: poetry run pytest --cov-fail-under=90 --cov=. --cov-report=xml  --cov-report=term
