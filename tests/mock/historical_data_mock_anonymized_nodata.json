@@ -72,30 +72,16 @@
  "timeseries": {
   "meter_uuid,0": {
    "series": [
-    {
-     "bill_read": 42.0,
-     "end_date": "1990-01-27T00:00:00",
-     "display_unit": "KGAL",
-     "meter_uuid": 1111111111111111111,
-     "value": 42.0,
-     "start_date": "1990-01-27T00:00:00",
-     "date": "1990-01-27 00:00:00",
-     "register_number": 1,
-     "estimated": 1,
-     "raw_read": 11111111,
-     "unit": "GAL"
-    }
-
-    ],
-    "legend": {
-     "supply_zone_id": "",
-     "location_name": "1111 XXXXXXXX XXXXX XX",
-     "account_id": "11111-1111111111",
-     "demand_zone_id": "",
-     "meter_id": "111111111",
-     "full_name": "XXXX XXXXXXXXXX",
-     "serial_number": "111111111"
-    }
+   ],
+   "legend": {
+    "supply_zone_id": "",
+    "location_name": "1111 XXXXXXXX XXXXX XX",
+    "account_id": "11111-1111111111",
+    "demand_zone_id": "",
+    "meter_id": "111111111",
+    "full_name": "XXXX XXXXXXXXXX",
+    "serial_number": "111111111"
+   }
   }
  },
  "timezone": "CDT",

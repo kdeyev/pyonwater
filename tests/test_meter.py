@@ -6,7 +6,14 @@ from typing import Any
 from aiohttp import web
 import pytest
 
-from pyonwater import Account, Client, EyeOnWaterAPIError, Meter, MeterReader
+from pyonwater import (
+    Account,
+    Client,
+    EyeOnWaterAPIError,
+    EyeOnWaterException,
+    Meter,
+    MeterReader,
+)
 from pyonwater.models import EOWUnits
 
 
@@ -76,6 +83,94 @@ def mock_historical_data_custom_units(new_unit):
 
 
 @pytest.mark.parametrize(
+    "metric,expected_units",
+    [
+        (False, "gal"),
+        (True, "m\u00b3"),
+    ],
+)
+async def test_meter_expected_units(aiohttp_client, loop, metric, expected_units):
+    """Basic pyonwater meter reader test"""
+    app = web.Application()
+
+    app.router.add_post("/account/signin", mock_signin)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
+    app.router.add_post("/api/2/residential/consumption", mock_historical_data)
+
+    websession = await aiohttp_client(app)
+
+    account = Account(
+        eow_hostname="",
+        username="user",
+        password="",
+        metric_measurement_system=metric,
+    )
+
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    meter_reader = MeterReader(
+        meter_uuid="meter_uuid",
+        meter_id="meter_id",
+        metric_measurement_system=account.metric_measurement_system,
+    )
+
+    meter = Meter(meter_reader)
+
+    assert meter.meter_id is not None
+    assert meter.meter_uuid is not None
+
+    assert meter.native_unit_of_measurement == expected_units
+
+
+async def test_meter(aiohttp_client, loop):
+    """Basic pyonwater meter reader test"""
+    app = web.Application()
+
+    app.router.add_post("/account/signin", mock_signin)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
+    app.router.add_post("/api/2/residential/consumption", mock_historical_data)
+
+    websession = await aiohttp_client(app)
+
+    account = Account(
+        eow_hostname="",
+        username="user",
+        password="",
+        metric_measurement_system=False,
+    )
+
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    meter_reader = MeterReader(
+        meter_uuid="meter_uuid",
+        meter_id="meter_id",
+        metric_measurement_system=account.metric_measurement_system,
+    )
+
+    meter = Meter(meter_reader)
+
+    with pytest.raises(EyeOnWaterException):
+        assert meter.reading
+
+    with pytest.raises(EyeOnWaterException):
+        assert meter.meter_info
+
+    await meter.read_meter(client=client, days_to_load=0)
+    assert meter.reading != 0
+    assert meter.meter_info is not None
+
+    await meter.read_meter(client=client, days_to_load=1)
+    assert meter.reading != 0
+    assert meter.meter_info is not None
+
+    await meter.read_meter(client=client, days_to_load=1)
+    assert meter.reading != 0
+    assert meter.meter_info is not None
+
+
+@pytest.mark.parametrize(
     "metric,units",
     [
         (False, "GAL"),
@@ -89,7 +184,7 @@ def mock_historical_data_custom_units(new_unit):
         (True, "CUBIC_METER"),
     ],
 )
-async def test_meter_us(aiohttp_client, loop, metric, units):
+async def test_meter_units(aiohttp_client, loop, metric, units):
     """Basic pyonwater meter reader test"""
     app = web.Application()
 
@@ -123,6 +218,9 @@ async def test_meter_us(aiohttp_client, loop, metric, units):
     await meter.read_meter(client=client)
 
     assert meter.reading != 0
+    assert meter.meter_id is not None
+    assert meter.meter_uuid is not None
+    assert meter.meter_info is not None
 
 
 @pytest.mark.parametrize(

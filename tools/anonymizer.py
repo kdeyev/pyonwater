@@ -50,6 +50,8 @@ def traverse(data: Any) -> Any:  # noqa: C901
             )
         elif is_date(data, "%Y-%m-%dT%H:%M:%S"):
             return datetime.datetime(1990, 1, 27, 0, 0).strftime("%Y-%m-%dT%H:%M:%S")
+        elif is_date(data, "%Y-%m-%d %H:%M:%S"):
+            return datetime.datetime(1990, 1, 27, 0, 0).strftime("%Y-%m-%d %H:%M:%S")
         elif is_unit(data):
             return data
         else:
