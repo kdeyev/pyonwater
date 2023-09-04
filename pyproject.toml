@@ -23,6 +23,7 @@ types-pytz = "^2023.3.0.1"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-aiohttp = "*"
+pytest-cov = "*"
 
 [tool.black]
 target-version = ["py39", "py310"]

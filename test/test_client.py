@@ -20,7 +20,7 @@ def mock_get_meters(request):  # type: ignore
 
 
 # @pytest.mark.asyncio
-async def test_hello(aiohttp_client, loop):  # type: ignore
+async def test_client(aiohttp_client, loop):  # type: ignore
     """Basic pyonwater client test"""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin)
