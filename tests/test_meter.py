@@ -12,7 +12,7 @@ from conftest import (
 )
 import pytest
 
-from pyonwater import EyeOnWaterAPIError, EyeOnWaterException, Meter, MeterReader
+from pyonwater import EyeOnWaterException, Meter, MeterReader
 
 """Mock for historical data request, but no actual data"""
 mock_historical_data_nodata_endpoint = build_data_endpoint(
@@ -137,18 +137,19 @@ async def test_meter(aiohttp_client, loop):
     assert meter.meter_info is not None
 
 
+@pytest.mark.parametrize("metric", [False, True])
 @pytest.mark.parametrize(
-    ("metric", "units"),
+    "units",
     [
-        (False, "GAL"),
-        (False, "100 GAL"),
-        (False, "10 GAL"),
-        (False, "CF"),
-        (False, "CCF"),
-        (False, "KGAL"),
-        (False, "CUBIC_FEET"),
-        (True, "CM"),
-        (True, "CUBIC_METER"),
+        "GAL",
+        "100 GAL",
+        "10 GAL",
+        "CF",
+        "CCF",
+        "KGAL",
+        "CUBIC_FEET",
+        "CM",
+        "CUBIC_METER",
     ],
 )
 async def test_meter_units(aiohttp_client, loop, metric, units):
@@ -184,18 +185,19 @@ async def test_meter_units(aiohttp_client, loop, metric, units):
     assert meter.meter_info is not None
 
 
+@pytest.mark.parametrize("metric", [False, True])
 @pytest.mark.parametrize(
-    ("metric", "units"),
+    "units",
     [
-        (True, "GAL"),
-        (True, "100 GAL"),
-        (True, "10 GAL"),
-        (True, "CF"),
-        (True, "CCF"),
-        (True, "KGAL"),
-        (True, "CUBIC_FEET"),
-        (False, "CM"),
-        (False, "CUBIC_METER"),
+        "GAL",
+        "100 GAL",
+        "10 GAL",
+        "CF",
+        "CCF",
+        "KGAL",
+        "CUBIC_FEET",
+        "CM",
+        "CUBIC_METER",
     ],
 )
 async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, units):
@@ -220,22 +222,23 @@ async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, un
     )
 
     meter = Meter(meter_reader)
-    with pytest.raises(EyeOnWaterAPIError):
-        await meter.read_meter(client=client)
+    await meter.read_meter(client=client)
+    assert meter.reading != 0
 
 
+@pytest.mark.parametrize("metric", [False, True])
 @pytest.mark.parametrize(
-    ("metric", "units"),
+    "units",
     [
-        (True, "GAL"),
-        (True, "100 GAL"),
-        (True, "10 GAL"),
-        (True, "CF"),
-        (True, "CCF"),
-        (True, "KGAL"),
-        (True, "CUBIC_FEET"),
-        (False, "CM"),
-        (False, "CUBIC_METER"),
+        "GAL",
+        "100 GAL",
+        "10 GAL",
+        "CF",
+        "CCF",
+        "KGAL",
+        "CUBIC_FEET",
+        "CM",
+        "CUBIC_METER",
     ],
 )
 async def test_meter_wrong_unit_reading(aiohttp_client, loop, metric, units):
@@ -260,6 +263,5 @@ async def test_meter_wrong_unit_reading(aiohttp_client, loop, metric, units):
     )
 
     meter = Meter(meter_reader)
-    with pytest.raises(EyeOnWaterAPIError):
-        await meter.read_meter(client=client)
-        assert meter.reading != 0
+    await meter.read_meter(client=client)
+    assert meter.reading != 0
