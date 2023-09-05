@@ -20,6 +20,10 @@ pydantic = "<2"
 
 [tool.poetry.group.dev.dependencies]
 types-pytz = "^2023.3.0.1"
+pytest = "^7.4.1"
+pytest-asyncio = "^0.21.1"
+pytest-aiohttp = "^1.0.4"
+pytest-cov = "^4.1.0"
 
 [tool.black]
 target-version = ["py39", "py310"]
@@ -67,3 +71,12 @@ warn_unused_ignores = true
 no_implicit_optional = true
 show_error_codes = true
 implicit_reexport = true
+exclude = ['venv', '.venv', 'tests']
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests"
+]
+asyncio_mode = "auto"

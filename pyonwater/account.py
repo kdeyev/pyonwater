@@ -8,11 +8,12 @@ from .exceptions import EyeOnWaterAPIError
 from .meter import Meter
 from .meter_reader import MeterReader
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
 
 DASHBOARD_ENDPOINT = "/dashboard/"
 METER_UUID_FIELD = "meter_uuid"
+METER_ID_FIELD = "meter_id"
 INFO_PREFIX = "AQ.Views.MeterPicker.meters = "
 
 
@@ -50,10 +51,11 @@ class Account:
                         )
 
                     meter_uuid = meter_info[METER_UUID_FIELD]
+                    meter_id = meter_info[METER_ID_FIELD]
 
                     meter = MeterReader(
                         meter_uuid=meter_uuid,
-                        meter_info=meter_info,
+                        meter_id=meter_id,
                         metric_measurement_system=self.metric_measurement_system,
                     )
                     meters.append(meter)

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from tenacity import retry, retry_if_exception_type
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from aiohttp import ClientSession
 
     from .account import Account
@@ -31,7 +31,9 @@ class Client:
 
     def __init__(self, websession: ClientSession, account: Account) -> None:
         """Initialize the client."""
-        self.base_url = "https://" + account.eow_hostname + "/"
+        self.base_url = (
+            "https://" + account.eow_hostname + "/" if account.eow_hostname else ""
+        )
         self.username = account.username
         self.password = account.password
         self.websession = websession
@@ -94,10 +96,7 @@ class Client:
                 },
             )
 
-            if "dashboard" not in str(resp.url):
-                _LOGGER.warning("METER NOT FOUND!")
-                msg = "No meter found"
-                raise EyeOnWaterAuthError(msg)
+            # if "dashboard" not in str(resp.url):
 
             if resp.status == 400:
                 msg = f"Username or password was not accepted by {self.base_url}"
