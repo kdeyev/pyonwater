@@ -8,20 +8,20 @@ from enum import Enum
 class EOWUnits(str, Enum):
     """Enum of supported EOW units."""
 
-    MEASUREMENT_GALLONS = "GAL"
-    MEASUREMENT_100_GALLONS = "100 GAL"
-    MEASUREMENT_10_GALLONS = "10 GAL"
-    MEASUREMENT_CF = "CF"
-    MEASUREMENT_CUBIC_FEET = "CUBIC_FEET"
-    MEASUREMENT_CCF = "CCF"
-    MEASUREMENT_KILOGALLONS = "KGAL"
-    MEASUREMENT_CM = "CM"
-    MEASUREMENT_CUBICMETERS = "CUBIC_METER"
+    UNIT_GAL = "GAL"
+    UNIT_100_GAL = "100 GAL"
+    UNIT_10_GAL = "10 GAL"
+    UNIT_CF = "CF"
+    UNIT_CUBIC_FEET = "CUBIC_FEET"
+    UNIT_CCF = "CCF"
+    UNIT_KGAL = "KGAL"
+    UNIT_CM = "CM"
+    UNIT_CUBIC_METER = "CUBIC_METER"
 
 
 class NativeUnits(str, Enum):
     """Enum of supported native units."""
 
-    GAL = "gal"
-    CF = "cf"
-    CM = "cm"
+    gal = "gal"
+    cf = "cf"
+    cm = "cm"

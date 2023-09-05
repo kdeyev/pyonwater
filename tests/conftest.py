@@ -3,7 +3,7 @@ from typing import Any
 
 from aiohttp import web
 
-from pyonwater import Account, Client
+from pyonwater import Account, Client, Meter, MeterReader
 from pyonwater.models import EOWUnits
 
 
@@ -113,3 +113,10 @@ async def build_client(websession) -> tuple[Account, Client]:
     client = Client(websession=websession, account=account)
     await client.authenticate()
     return account, client
+
+
+async def build_meter(client: Client) -> Meter:
+    """Build meter object."""
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+    meter_info = await meter_reader.read_meter_info(client)
+    return Meter(meter_reader, meter_info)

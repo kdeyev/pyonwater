@@ -28,7 +28,7 @@ async def test_meter_reader(aiohttp_client, loop):
 
     meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
-    meter_info = await meter_reader.read_meter(client=client)
+    meter_info = await meter_reader.read_meter_info(client=client)
     assert meter_info.reading.latest_read.full_read != 0
 
     await meter_reader.read_historical_data(client=client, days_to_load=1)
@@ -51,4 +51,4 @@ async def test_meter_reader_wrong_units(aiohttp_client, loop):
     meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
     with pytest.raises(EyeOnWaterAPIError):
-        await meter_reader.read_meter(client=client)
+        await meter_reader.read_meter_info(client=client)

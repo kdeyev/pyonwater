@@ -31,7 +31,7 @@ class MeterReader:
         self.meter_uuid = meter_uuid
         self.meter_id: str = meter_id
 
-    async def read_meter(self, client: Client) -> MeterInfo:
+    async def read_meter_info(self, client: Client) -> MeterInfo:
         """Triggers an on-demand meter read and returns it when complete."""
         _LOGGER.debug("Requesting meter reading")
 
