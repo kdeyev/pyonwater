@@ -23,6 +23,68 @@ CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
 _LOGGER = logging.getLogger(__name__)
 
 
+CF_TO_GAL = 7.48052
+CM_TO_CF = 35.3147
+CM_TO_GAL = 264.17207058602
+GAL_TO_CM = 0.00378541
+CF_TO_CM = 0.0283168332467544186
+
+
+def convert_to_cm(read_unit: str, value: float) -> float:
+    """Convert read units to m^3."""
+    if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
+        pass
+    elif read_unit == EOWUnits.MEASUREMENT_KILOGALLONS:
+        value = value * 1000 * GAL_TO_CM
+    elif read_unit == EOWUnits.MEASUREMENT_100_GALLONS:
+        value = value * 100 * GAL_TO_CM
+    elif read_unit == EOWUnits.MEASUREMENT_10_GALLONS:
+        value = value * 10 * GAL_TO_CM
+    elif read_unit == EOWUnits.MEASUREMENT_GALLONS:
+        value = value * GAL_TO_CM
+    elif read_unit == EOWUnits.MEASUREMENT_CCF:
+        value = value * CF_TO_CM * 100
+    elif read_unit in [
+        EOWUnits.MEASUREMENT_CF,
+        EOWUnits.MEASUREMENT_CUBIC_FEET,
+    ]:
+        value = value * CF_TO_CM
+    else:
+        msg = f"Unsupported measurement unit: {read_unit}"
+        raise EyeOnWaterAPIError(
+            msg,
+        )
+    return value
+
+
+def convert_to_gal(read_unit: str, value: float) -> float:
+    """Convert read units to gallons."""
+    if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
+        value = value * CM_TO_GAL
+    elif read_unit == EOWUnits.MEASUREMENT_KILOGALLONS:
+        value = value * 1000
+    elif read_unit == EOWUnits.MEASUREMENT_100_GALLONS:
+        value = value * 100
+    elif read_unit == EOWUnits.MEASUREMENT_10_GALLONS:
+        value = value * 10
+    elif read_unit == EOWUnits.MEASUREMENT_GALLONS:
+        pass
+    elif read_unit == EOWUnits.MEASUREMENT_CCF:
+        value = value * CF_TO_GAL * 100
+    elif read_unit in [
+        EOWUnits.MEASUREMENT_CF,
+        EOWUnits.MEASUREMENT_CUBIC_FEET,
+    ]:
+        value = value * CF_TO_GAL
+    else:
+        msg = f"Unsupported measurement unit: {read_unit}"
+        raise EyeOnWaterAPIError(
+            msg,
+        )
+
+    return value
+
+
 class MeterReader:
     """Class represents meter reader."""
 
@@ -64,35 +126,9 @@ class MeterReader:
     def convert(self, read_unit: str, value: float) -> float:
         """Convert reading to Cubic Meter or Gallons."""
         if self.metric_measurement_system:
-            if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
-                pass
-            else:
-                msg = f"Unsupported measurement unit: {read_unit}"
-                raise EyeOnWaterAPIError(
-                    msg,
-                )
+            return convert_to_cm(read_unit, value)
         else:
-            if read_unit == EOWUnits.MEASUREMENT_KILOGALLONS:
-                value = value * 1000
-            elif read_unit == EOWUnits.MEASUREMENT_100_GALLONS:
-                value = value * 100
-            elif read_unit == EOWUnits.MEASUREMENT_10_GALLONS:
-                value = value * 10
-            elif read_unit == EOWUnits.MEASUREMENT_GALLONS:
-                pass
-            elif read_unit == EOWUnits.MEASUREMENT_CCF:
-                value = value * 748.052
-            elif read_unit in [
-                EOWUnits.MEASUREMENT_CF,
-                EOWUnits.MEASUREMENT_CUBIC_FEET,
-            ]:
-                value = value * 7.48052
-            else:
-                msg = f"Unsupported measurement unit: {read_unit}"
-                raise EyeOnWaterAPIError(
-                    msg,
-                )
-        return value
+            return convert_to_gal(read_unit, value)
 
     async def read_historical_data(
         self,
