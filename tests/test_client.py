@@ -1,6 +1,7 @@
 """Tests for pyonwater client"""
 
 from aiohttp import web
+from conftest import add_error_decorator, mock_get_meters_endpoint, mock_signin_enpoint
 import pytest
 
 from pyonwater import (
@@ -12,41 +13,10 @@ from pyonwater import (
 )
 
 
-async def mock_signin(request):
-    """Mock for sign in HTTP call"""
-    resp = web.Response(text="Hello, world", headers={"cookies": "key=val"})
-    return resp
-
-
-def mock_get_meters(request):
-    """Mock for get dashboard request"""
-    data = """  AQ.Views.MeterPicker.meters = [{"display_address": "", "": "", "meter_uuid": "123", "meter_id": "456", "city": "", "location_name": "", "has_leak": false, "state": "", "serial_number": "789", "utility_uuid": "123", "page": 1, "zip_code": ""}];
-            junk"""
-
-    return web.Response(text=data)
-
-
-def mock_error_response(code: int, func):
-    """Mock error response"""
-
-    counter = 0
-
-    def mock(request):
-        nonlocal counter
-        if counter == 0:
-            counter += 1
-            return web.Response(status=code)
-        else:
-            return func(request)
-
-    return mock
-
-
 async def test_client(aiohttp_client, loop):
-    """Basic pyonwater client test"""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_get("/dashboard/user", mock_get_meters)
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_get("/dashboard/user", mock_get_meters_endpoint)
     websession = await aiohttp_client(app)
 
     account = Account(
@@ -66,9 +36,10 @@ async def test_client(aiohttp_client, loop):
 
 
 async def test_client_403(aiohttp_client, loop):
-    """Basic pyonwater client test"""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_error_response(403, mock_signin))
+    app.router.add_post(
+        "/account/signin", add_error_decorator(mock_signin_enpoint, 403)
+    )
     websession = await aiohttp_client(app)
 
     account = Account(
@@ -86,9 +57,10 @@ async def test_client_403(aiohttp_client, loop):
 
 
 async def test_client_400(aiohttp_client, loop):
-    """Basic pyonwater client test"""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_error_response(400, mock_signin))
+    app.router.add_post(
+        "/account/signin", add_error_decorator(mock_signin_enpoint, 400)
+    )
     websession = await aiohttp_client(app)
 
     account = Account(
@@ -106,10 +78,11 @@ async def test_client_400(aiohttp_client, loop):
 
 
 async def test_client_data_403(aiohttp_client, loop):
-    """Basic pyonwater client test"""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_get("/dashboard/user", mock_error_response(403, mock_get_meters))
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_get(
+        "/dashboard/user", add_error_decorator(mock_get_meters_endpoint, 403)
+    )
     websession = await aiohttp_client(app)
 
     account = Account(
@@ -129,10 +102,11 @@ async def test_client_data_403(aiohttp_client, loop):
 
 
 async def test_client_data_401(aiohttp_client, loop):
-    """Basic pyonwater client test"""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_get("/dashboard/user", mock_error_response(401, mock_get_meters))
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_get(
+        "/dashboard/user", add_error_decorator(mock_get_meters_endpoint, 401)
+    )
     websession = await aiohttp_client(app)
 
     account = Account(
@@ -151,10 +125,11 @@ async def test_client_data_401(aiohttp_client, loop):
 
 
 async def test_client_data_404(aiohttp_client, loop):
-    """Basic pyonwater client test"""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_get("/dashboard/user", mock_error_response(404, mock_get_meters))
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_get(
+        "/dashboard/user", add_error_decorator(mock_get_meters_endpoint, 404)
+    )
     websession = await aiohttp_client(app)
 
     account = Account(

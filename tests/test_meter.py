@@ -1,9 +1,16 @@
-"""Tests for pyonwater meter reader"""
+"""Tests for pyonwater meter"""
 
-import json
-from typing import Any
 
 from aiohttp import web
+from conftest import (
+    change_units_decorator,
+    mock_historical_data_endpoint,
+    mock_historical_data_newer_data_endpoint,
+    mock_historical_data_newerdata_moredata_endpoint,
+    mock_historical_data_nodata_endpoint,
+    mock_read_meter_endpont,
+    mock_signin_enpoint,
+)
 import pytest
 
 from pyonwater import (
@@ -14,92 +21,6 @@ from pyonwater import (
     Meter,
     MeterReader,
 )
-from pyonwater.models import EOWUnits
-
-
-def is_unit(string: str) -> bool:
-    """Verify is the string is pyonwater supported measurement unit"""
-    try:
-        EOWUnits(string)
-        return True
-    except ValueError:
-        return False
-
-
-def replace_units(data: Any, new_unit: str) -> Any:
-    """Anonymize an entity"""
-    if isinstance(data, dict):
-        for k in data:
-            data[k] = replace_units(data[k], new_unit)
-        return data
-    elif isinstance(data, list):
-        for i in range(len(data)):
-            data[i] = replace_units(data[i], new_unit)
-        return data
-    elif is_unit(data):
-        return new_unit
-    else:
-        return data
-
-
-async def mock_signin(request):
-    """Mock for sign in HTTP call"""
-    resp = web.Response(text="Hello, world", headers={"cookies": "key=val"})
-    return resp
-
-
-def mock_read_meter(request):
-    """Mock for read meter request"""
-    with open("tests//mock/read_meter_mock_anonymized.json") as f:
-        return web.Response(text=f.read())
-
-
-def mock_historical_data(request):
-    """Mock for historical datas request"""
-    with open("tests//mock/historical_data_mock_anonymized.json") as f:
-        return web.Response(text=f.read())
-
-
-def mock_historical_nodata(request):
-    """Mock for historical datas request"""
-    with open("tests//mock/historical_data_mock_anonymized_nodata.json") as f:
-        return web.Response(text=f.read())
-
-
-def mock_historical_newerdata(request):
-    """Mock for historical datas request"""
-    with open("tests//mock/historical_data_mock_anonymized_newer_data.json") as f:
-        return web.Response(text=f.read())
-
-
-def mock_historical_newerdata_moredata(request):
-    """Mock for historical datas request"""
-    with open(
-        "tests//mock/historical_data_mock_anonymized_newer_data_moredata.json"
-    ) as f:
-        return web.Response(text=f.read())
-
-
-def mock_read_meter_custom_units(new_unit):
-    def mock_read_meter(request):
-        """Mock for read meter request"""
-        with open("tests//mock/read_meter_mock_anonymized.json") as f:
-            data = json.load(f)
-            data = replace_units(data, new_unit)
-            return web.Response(text=json.dumps(data))
-
-    return mock_read_meter
-
-
-def mock_historical_data_custom_units(new_unit):
-    def mock_read_meter(request):
-        """Mock for read meter request"""
-        with open("tests//mock/historical_data_mock_anonymized.json") as f:
-            data = json.load(f)
-            data = replace_units(data, new_unit)
-            return web.Response(text=json.dumps(data))
-
-    return mock_read_meter
 
 
 @pytest.mark.parametrize(
@@ -110,12 +31,11 @@ def mock_historical_data_custom_units(new_unit):
     ],
 )
 async def test_meter_expected_units(aiohttp_client, loop, metric, expected_units):
-    """Basic pyonwater meter reader test"""
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
-    app.router.add_post("/api/2/residential/consumption", mock_historical_data)
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpont)
+    app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
 
     websession = await aiohttp_client(app)
 
@@ -157,14 +77,15 @@ async def build_client(websession, metric):
 
 
 async def test_meter(aiohttp_client, loop):
-    """Basic pyonwater meter reader test"""
     metric = False
 
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
-    app.router.add_post("/api/2/residential/consumption", mock_historical_nodata)
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpont)
+    app.router.add_post(
+        "/api/2/residential/consumption", mock_historical_data_nodata_endpoint
+    )
 
     websession = await aiohttp_client(app)
 
@@ -190,9 +111,9 @@ async def test_meter(aiohttp_client, loop):
 
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
-    app.router.add_post("/api/2/residential/consumption", mock_historical_data)
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpont)
+    app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
 
     websession = await aiohttp_client(app)
 
@@ -204,24 +125,27 @@ async def test_meter(aiohttp_client, loop):
 
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
-    app.router.add_post("/api/2/residential/consumption", mock_historical_newerdata)
-
-    websession = await aiohttp_client(app)
-
-    client = await build_client(websession, metric)
-
-    await meter.read_meter(client=client, days_to_load=1)
-    assert meter.reading != 0
-    assert meter.meter_info is not None
-
-    app = web.Application()
-
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpont)
     app.router.add_post(
-        "/api/2/residential/consumption", mock_historical_newerdata_moredata
+        "/api/2/residential/consumption", mock_historical_data_newer_data_endpoint
+    )
+
+    websession = await aiohttp_client(app)
+
+    client = await build_client(websession, metric)
+
+    await meter.read_meter(client=client, days_to_load=1)
+    assert meter.reading != 0
+    assert meter.meter_info is not None
+
+    app = web.Application()
+
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpont)
+    app.router.add_post(
+        "/api/2/residential/consumption",
+        mock_historical_data_newerdata_moredata_endpoint,
     )
 
     websession = await aiohttp_client(app)
@@ -248,15 +172,16 @@ async def test_meter(aiohttp_client, loop):
     ],
 )
 async def test_meter_units(aiohttp_client, loop, metric, units):
-    """Basic pyonwater meter reader test"""
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin)
+    app.router.add_post("/account/signin", mock_signin_enpoint)
     app.router.add_post(
-        "/api/2/residential/new_search", mock_read_meter_custom_units(units)
+        "/api/2/residential/new_search",
+        change_units_decorator(mock_read_meter_endpont, units),
     )
     app.router.add_post(
-        "/api/2/residential/consumption", mock_historical_data_custom_units(units)
+        "/api/2/residential/consumption",
+        change_units_decorator(mock_historical_data_endpoint, units),
     )
 
     websession = await aiohttp_client(app)
@@ -301,13 +226,13 @@ async def test_meter_units(aiohttp_client, loop, metric, units):
     ],
 )
 async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, units):
-    """Basic pyonwater meter reader test"""
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter)
+    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpont)
     app.router.add_post(
-        "/api/2/residential/consumption", mock_historical_data_custom_units(units)
+        "/api/2/residential/consumption",
+        change_units_decorator(mock_historical_data_endpoint, units),
     )
 
     websession = await aiohttp_client(app)
@@ -348,14 +273,14 @@ async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, un
     ],
 )
 async def test_meter_wrong_unit_reading(aiohttp_client, loop, metric, units):
-    """Basic pyonwater meter reader test"""
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin)
+    app.router.add_post("/account/signin", mock_signin_enpoint)
     app.router.add_post(
-        "/api/2/residential/new_search", mock_read_meter_custom_units(units)
+        "/api/2/residential/new_search",
+        change_units_decorator(mock_read_meter_endpont, units),
     )
-    app.router.add_post("/api/2/residential/consumption", mock_historical_data)
+    app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
 
     websession = await aiohttp_client(app)
 
