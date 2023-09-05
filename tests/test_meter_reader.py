@@ -1,4 +1,4 @@
-"""Tests for pyonwater meter reader"""
+"""Tests for pyonwater meter reader."""
 
 
 from aiohttp import web
@@ -15,7 +15,7 @@ from pyonwater import EyeOnWaterAPIError, MeterReader
 
 
 async def test_meter_reader(aiohttp_client, loop):
-    """Basic meter reader test"""
+    """Basic meter reader test."""
     app = web.Application()
 
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -39,7 +39,7 @@ async def test_meter_reader(aiohttp_client, loop):
 
 
 async def test_meter_reader_wrong_units(aiohttp_client, loop):
-    """Test reading date with unknown units"""
+    """Test reading date with unknown units."""
     app = web.Application()
 
     app.router.add_post("/account/signin", mock_signin_endpoint)

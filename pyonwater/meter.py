@@ -51,7 +51,7 @@ class Meter:
 
     @property
     def native_unit_of_measurement(self) -> str:
-        """Return native measurement unit: [m^3, gal]"""
+        """Return native measurement unit: [m^3, gal]."""
         return self.reader.native_unit_of_measurement
 
     async def read_meter(self, client: Client, days_to_load: int = 3) -> None:

@@ -1,4 +1,4 @@
-"""Tests for pyonwater meter"""
+"""Tests for pyonwater meter."""
 
 
 from aiohttp import web
@@ -16,29 +16,29 @@ from pyonwater import EyeOnWaterAPIError, EyeOnWaterException, Meter, MeterReade
 
 """Mock for historical data request, but no actual data"""
 mock_historical_data_nodata_endpoint = build_data_endpoint(
-    "historical_data_mock_anonymized_nodata"
+    "historical_data_mock_anonymized_nodata",
 )
 
 """Mock for historical data request, but newer data"""
 mock_historical_data_newer_data_endpoint = build_data_endpoint(
-    "historical_data_mock_anonymized_newer_data"
+    "historical_data_mock_anonymized_newer_data",
 )
 
 """Mock for historical data request, but newer and more data"""
 mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
-    "historical_data_mock_anonymized_newer_data_moredata"
+    "historical_data_mock_anonymized_newer_data_moredata",
 )
 
 
 @pytest.mark.parametrize(
-    "metric,expected_units",
+    ("metric", "expected_units"),
     [
         (False, "gal"),
         (True, "m\u00b3"),
     ],
 )
 async def test_meter_expected_units(aiohttp_client, loop, metric, expected_units):
-    """Test meter returns expected units"""
+    """Test meter returns expected units."""
     app = web.Application()
 
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -64,14 +64,15 @@ async def test_meter_expected_units(aiohttp_client, loop, metric, expected_units
 
 
 async def test_meter(aiohttp_client, loop):
-    """Basic meter test"""
+    """Basic meter test."""
     metric = False
 
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post(
-        "/api/2/residential/consumption", mock_historical_data_nodata_endpoint
+        "/api/2/residential/consumption",
+        mock_historical_data_nodata_endpoint,
     )
     websession = await aiohttp_client(app)
     account, client = await build_client(websession, metric=metric)
@@ -109,7 +110,8 @@ async def test_meter(aiohttp_client, loop):
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post(
-        "/api/2/residential/consumption", mock_historical_data_newer_data_endpoint
+        "/api/2/residential/consumption",
+        mock_historical_data_newer_data_endpoint,
     )
     websession = await aiohttp_client(app)
     account, client = await build_client(websession, metric=metric)
@@ -136,7 +138,7 @@ async def test_meter(aiohttp_client, loop):
 
 
 @pytest.mark.parametrize(
-    "metric,units",
+    ("metric", "units"),
     [
         (False, "GAL"),
         (False, "100 GAL"),
@@ -150,8 +152,7 @@ async def test_meter(aiohttp_client, loop):
     ],
 )
 async def test_meter_units(aiohttp_client, loop, metric, units):
-    """Test handling data with different units"""
-
+    """Test handling data with different units."""
     app = web.Application()
 
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -184,7 +185,7 @@ async def test_meter_units(aiohttp_client, loop, metric, units):
 
 
 @pytest.mark.parametrize(
-    "metric,units",
+    ("metric", "units"),
     [
         (True, "GAL"),
         (True, "100 GAL"),
@@ -198,8 +199,7 @@ async def test_meter_units(aiohttp_client, loop, metric, units):
     ],
 )
 async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, units):
-    """Test handling data with different units of historical data"""
-
+    """Test handling data with different units of historical data."""
     app = web.Application()
 
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -225,7 +225,7 @@ async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, un
 
 
 @pytest.mark.parametrize(
-    "metric,units",
+    ("metric", "units"),
     [
         (True, "GAL"),
         (True, "100 GAL"),
@@ -239,8 +239,7 @@ async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, un
     ],
 )
 async def test_meter_wrong_unit_reading(aiohttp_client, loop, metric, units):
-    """Test handling data with different units of reading"""
-
+    """Test handling data with different units of reading."""
     app = web.Application()
 
     app.router.add_post("/account/signin", mock_signin_endpoint)

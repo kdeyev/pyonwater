@@ -1,4 +1,4 @@
-"""Tests for pyonwater meter reader"""
+"""Tests for pyonwater meter reader."""
 
 
 import pytest
@@ -7,7 +7,7 @@ from pyonwater import EyeOnWaterAPIError, MeterReader
 
 
 def test_conversion_us():
-    """Test units conversion for US units"""
+    """Test units conversion for US units."""
     meter_reader = MeterReader(
         meter_uuid="meter_uuid",
         meter_id="meter_id",
@@ -21,7 +21,7 @@ def test_conversion_us():
 
 
 def test_conversion_metric():
-    """Test units conversion for metric units"""
+    """Test units conversion for metric units."""
     meter_reader = MeterReader(
         meter_uuid="meter_uuid",
         meter_id="meter_id",

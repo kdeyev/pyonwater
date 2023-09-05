@@ -1,4 +1,4 @@
-"""Tests for pyonwater client"""
+"""Tests for pyonwater client."""
 
 from aiohttp import web
 from conftest import add_error_decorator, mock_get_meters_endpoint, mock_signin_endpoint
@@ -14,7 +14,7 @@ from pyonwater import (
 
 
 async def test_client(aiohttp_client, loop):
-    """Basic client test"""
+    """Basic client test."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get("/dashboard/user", mock_get_meters_endpoint)
@@ -37,10 +37,11 @@ async def test_client(aiohttp_client, loop):
 
 
 async def test_client_403(aiohttp_client, loop):
-    """Test handling rate limit errors during authentication"""
+    """Test handling rate limit errors during authentication."""
     app = web.Application()
     app.router.add_post(
-        "/account/signin", add_error_decorator(mock_signin_endpoint, 403)
+        "/account/signin",
+        add_error_decorator(mock_signin_endpoint, 403),
     )
     websession = await aiohttp_client(app)
 
@@ -59,10 +60,11 @@ async def test_client_403(aiohttp_client, loop):
 
 
 async def test_client_400(aiohttp_client, loop):
-    """Test handling Auth errors during authentication"""
+    """Test handling Auth errors during authentication."""
     app = web.Application()
     app.router.add_post(
-        "/account/signin", add_error_decorator(mock_signin_endpoint, 400)
+        "/account/signin",
+        add_error_decorator(mock_signin_endpoint, 400),
     )
     websession = await aiohttp_client(app)
 
@@ -81,11 +83,12 @@ async def test_client_400(aiohttp_client, loop):
 
 
 async def test_client_data_403(aiohttp_client, loop):
-    """Test handling rate limit errors"""
+    """Test handling rate limit errors."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get(
-        "/dashboard/user", add_error_decorator(mock_get_meters_endpoint, 403)
+        "/dashboard/user",
+        add_error_decorator(mock_get_meters_endpoint, 403),
     )
     websession = await aiohttp_client(app)
 
@@ -106,11 +109,12 @@ async def test_client_data_403(aiohttp_client, loop):
 
 
 async def test_client_data_401(aiohttp_client, loop):
-    """Test handling token expiration errors"""
+    """Test handling token expiration errors."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get(
-        "/dashboard/user", add_error_decorator(mock_get_meters_endpoint, 401)
+        "/dashboard/user",
+        add_error_decorator(mock_get_meters_endpoint, 401),
     )
     websession = await aiohttp_client(app)
 
@@ -131,11 +135,12 @@ async def test_client_data_401(aiohttp_client, loop):
 
 
 async def test_client_data_404(aiohttp_client, loop):
-    """Test handling 404 errors"""
+    """Test handling 404 errors."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get(
-        "/dashboard/user", add_error_decorator(mock_get_meters_endpoint, 404)
+        "/dashboard/user",
+        add_error_decorator(mock_get_meters_endpoint, 404),
     )
     websession = await aiohttp_client(app)
 

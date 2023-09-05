@@ -10,7 +10,7 @@ from pyonwater.models import EOWUnits
 
 
 def is_date(string: str, mask: str) -> bool:
-    """Verify is the string is pyonwater supported datetime"""
+    """Verify is the string is pyonwater supported datetime."""
     try:
         datetime.datetime.strptime(string, mask)
         return True
@@ -19,7 +19,7 @@ def is_date(string: str, mask: str) -> bool:
 
 
 def is_unit(string: str) -> bool:
-    """Verify is the string is pyonwater supported measurement unit"""
+    """Verify is the string is pyonwater supported measurement unit."""
     try:
         EOWUnits(string)
         return True
@@ -28,7 +28,7 @@ def is_unit(string: str) -> bool:
 
 
 def traverse(data: Any) -> Any:  # noqa: C901
-    """Anonymize an entity"""
+    """Anonymize an entity."""
     if isinstance(data, dict):
         for k in data:
             data[k] = traverse(data[k])
@@ -46,7 +46,7 @@ def traverse(data: Any) -> Any:  # noqa: C901
     elif isinstance(data, str):
         if is_date(data, "%Y-%m-%dT%H:%M:%S.%fZ"):
             return datetime.datetime(1990, 1, 27, 0, 0).strftime(
-                "%Y-%m-%dT%H:%M:%S.%fZ"
+                "%Y-%m-%dT%H:%M:%S.%fZ",
             )
         elif is_date(data, "%Y-%m-%dT%H:%M:%S"):
             return datetime.datetime(1990, 1, 27, 0, 0).strftime("%Y-%m-%dT%H:%M:%S")
@@ -56,8 +56,7 @@ def traverse(data: Any) -> Any:  # noqa: C901
             return data
         else:
             data = re.sub(r"[a-zA-Z]", "X", data)
-            data = re.sub(r"[\d]", "1", data)
-            return data
+            return re.sub(r"[\d]", "1", data)
     else:
         return data
 

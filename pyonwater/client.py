@@ -97,9 +97,6 @@ class Client:
             )
 
             # if "dashboard" not in str(resp.url):
-            #     _LOGGER.warning("METER NOT FOUND!")
-            #     msg = "No meter found"
-            #     raise EyeOnWaterAuthError(msg)
 
             if resp.status == 400:
                 msg = f"Username or password was not accepted by {self.base_url}"

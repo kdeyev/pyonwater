@@ -8,7 +8,7 @@ from pyonwater.models import EOWUnits
 
 
 def is_unit(string: str) -> bool:
-    """Verify is the string is pyonwater supported measurement unit"""
+    """Verify is the string is pyonwater supported measurement unit."""
     try:
         EOWUnits(string)
         return True
@@ -17,7 +17,7 @@ def is_unit(string: str) -> bool:
 
 
 def replace_units(data: Any, new_unit: str) -> Any:
-    """Replace EOW units in JSON recursively"""
+    """Replace EOW units in JSON recursively."""
     if isinstance(data, dict):
         for k in data:
             data[k] = replace_units(data[k], new_unit)
@@ -33,13 +33,12 @@ def replace_units(data: Any, new_unit: str) -> Any:
 
 
 async def mock_signin_endpoint(request):
-    """Sign in HTTP endpoint mock"""
-    resp = web.Response(text="Hello, world", headers={"cookies": "key=val"})
-    return resp
+    """Sign in HTTP endpoint mock."""
+    return web.Response(text="Hello, world", headers={"cookies": "key=val"})
 
 
 def mock_get_meters_endpoint(request):
-    """Fetch meters endpoit mock"""
+    """Fetch meters endpoit mock."""
     data = """  AQ.Views.MeterPicker.meters = [{"display_address": "", "": "", "meter_uuid": "123", "meter_id": "456", "city": "", "location_name": "", "has_leak": false, "state": "", "serial_number": "789", "utility_uuid": "123", "page": 1, "zip_code": ""}];
             junk"""
 
@@ -47,7 +46,7 @@ def mock_get_meters_endpoint(request):
 
 
 def build_data_endpoint(filename: str):
-    """ "Build an endpoint with data coming from mock data file"""
+    """ "Build an endpoint with data coming from mock data file."""
 
     def read_data(request):
         with open(f"tests//mock_data/{filename}.json") as f:
@@ -57,7 +56,7 @@ def build_data_endpoint(filename: str):
 
 
 def build_data_with_units_endpoint(filename: str, units: str):
-    """ "Build an endpoint with data coming from mock data file and specific unit"""
+    """ "Build an endpoint with data coming from mock data file and specific unit."""
 
     def read_data(request):
         with open(f"tests//mock_data/{filename}.json") as f:
@@ -69,7 +68,7 @@ def build_data_with_units_endpoint(filename: str, units: str):
 
 
 def change_units_decorator(endpoint, new_unit):
-    """Decorator for replacing EOW units in another endpoint response"""
+    """Decorator for replacing EOW units in another endpoint response."""
 
     def change_units_endpoint(request):
         resp = endpoint(request)
@@ -82,8 +81,7 @@ def change_units_decorator(endpoint, new_unit):
 
 
 def add_error_decorator(endpoint, code: int):
-    """Decorator for adding one error to another endpoint. The second call will be successful"""
-
+    """Decorator for adding one error to another endpoint. The second call will be successful."""
     counter = 0
 
     def mock(request):
@@ -105,7 +103,7 @@ mock_historical_data_endpoint = build_data_endpoint("historical_data_mock_anonym
 
 
 async def build_client(websession, metric: bool = False) -> tuple[Account, Client]:
-    """Build authenticated client"""
+    """Build authenticated client."""
     account = Account(
         eow_hostname="",
         username="user",
