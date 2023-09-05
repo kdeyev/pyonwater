@@ -29,3 +29,7 @@ class EyeOnWaterAPIError(EyeOnWaterException):
 
 class EyeOnWaterResponseIsEmpty(EyeOnWaterException):
     """API answered correct but there is not content to parse."""
+
+
+class EyeOnWaterUnitError(EyeOnWaterException):
+    """Exception for units related errors."""

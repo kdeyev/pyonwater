@@ -208,7 +208,7 @@ class LatestRead(BaseModel):
     # Optional fields
     bill_read: Optional[str] = None
     bill_display_units: Optional[EOWUnits] = None
-    read_time: Optional[datetime] = None
+    read_time: datetime
     has_endpoints: Optional[bool] = None
     method: Optional[str] = None
 
