@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 import pytz
@@ -12,7 +12,7 @@ import pytz
 from .exceptions import EyeOnWaterAPIError, EyeOnWaterResponseIsEmpty
 from .models import DataPoint, EOWUnits, HistoricalData, MeterInfo
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
 
     pass
@@ -29,12 +29,12 @@ class MeterReader:
     def __init__(
         self,
         meter_uuid: str,
-        meter_info: dict[str, Any],
+        meter_id: str,
         metric_measurement_system: bool,
     ) -> None:
         """Initialize the meter."""
         self.meter_uuid = meter_uuid
-        self.meter_id: str = meter_info["meter_id"]
+        self.meter_id: str = meter_id
 
         self.metric_measurement_system = metric_measurement_system
         self.native_unit_of_measurement = (
@@ -61,7 +61,7 @@ class MeterReader:
 
         return meter_info
 
-    def convert(self, read_unit: str, amount: float) -> float:
+    def convert(self, read_unit: str, value: float) -> float:
         """Convert reading to Cubic Meter or Gallons."""
         if self.metric_measurement_system:
             if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
@@ -73,26 +73,26 @@ class MeterReader:
                 )
         else:
             if read_unit == EOWUnits.MEASUREMENT_KILOGALLONS:
-                amount = amount * 1000
+                value = value * 1000
             elif read_unit == EOWUnits.MEASUREMENT_100_GALLONS:
-                amount = amount * 100
+                value = value * 100
             elif read_unit == EOWUnits.MEASUREMENT_10_GALLONS:
-                amount = amount * 10
+                value = value * 10
             elif read_unit == EOWUnits.MEASUREMENT_GALLONS:
                 pass
             elif read_unit == EOWUnits.MEASUREMENT_CCF:
-                amount = amount * 748.052
+                value = value * 748.052
             elif read_unit in [
-                EOWUnits.MEASUREMENT_CCF,
+                EOWUnits.MEASUREMENT_CF,
                 EOWUnits.MEASUREMENT_CUBIC_FEET,
             ]:
-                amount = amount * 7.48052
+                value = value * 7.48052
             else:
                 msg = f"Unsupported measurement unit: {read_unit}"
                 raise EyeOnWaterAPIError(
                     msg,
                 )
-        return amount
+        return value
 
     async def read_historical_data(
         self,

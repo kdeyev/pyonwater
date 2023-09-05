@@ -1,0 +1,77 @@
+{
+    "hit": {
+     "meter.communication_seconds": [
+      11111
+     ],
+     "meter.timezone": [
+      "US/Central"
+     ],
+     "register_0.encoder": [
+      {
+       "dials": 1
+      }
+     ],
+     "location.location_uuid": [
+      "1111111111111111111"
+     ],
+     "meter.fluid_type": [
+      "XXXXX"
+     ],
+     "meter.meter_id": [
+      "111111111"
+     ],
+     "account.full_name": [
+      "XXXX XXXXXXXXXX"
+     ],
+     "meter.meter_uuid": [
+      "1111111111111111111"
+     ],
+     "meter.has_endpoint": [
+      true
+     ],
+     "meter.serial_number": [
+      "111111111"
+     ],
+     "account.account_id": [
+      "11111-1111111111"
+     ],
+     "location.location_name": [
+      "1111 XXXXXXXX XXXXX XX"
+     ],
+     "service.service_id": [
+      "XXX1"
+     ],
+     "register_0.serial_number": [
+      "111111111"
+     ],
+     "utility.utility_uuid": [
+      "1111111111111111111"
+     ],
+     "account.account_uuid": [
+      "1111111111111111111"
+     ]
+    },
+    "min_chart_aggregation": "XXXXXXX",
+    "params": {
+     "start_date_utc": 42.0,
+     "date": "1990-01-27T00:00:00",
+     "end_date": "1990-01-27T00:00:00",
+     "end_date_utc": 42.0,
+     "compare": false,
+     "read_type": "XXXXXXXX",
+     "start_date": "1990-01-27T00:00:00",
+     "end_date_tz": "1111-11-11X11:11:11-11:11",
+     "aggregate": "XXXXXX",
+     "aggregate_group": "%X-%X-%X %X:11:11",
+     "perspective": "XXXXXXXX",
+     "units": "GAL",
+     "start_date_tz": "1111-11-11X11:11:11-11:11",
+     "adjust_to": false,
+     "combine_group": false
+    },
+    "timeseries": {
+    },
+    "timezone": "CDT",
+    "min_aggregation_seconds": 111,
+    "annotations": []
+   }

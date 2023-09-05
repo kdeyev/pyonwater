@@ -1,0 +1,371 @@
+{
+ "elastic_results": {
+  "hits": {
+   "hits": [
+    {
+     "_score": 1,
+     "_id": "1111111111111111111",
+     "_source": {
+      "updated": 1111,
+      "last_updated": "1990-01-27T00:00:00.000000Z",
+      "service": {
+       "class_code_normalized": "",
+       "route": "111",
+       "active": true,
+       "class_code": "",
+       "service_type": "X",
+       "service_id": "XXX1",
+       "start_date": "1990-01-27T00:00:00",
+       "service_point_uuid": "1111111111111111111",
+       "cycle": ""
+      },
+      "location": {
+       "city": "XXXX",
+       "parcel_number": "",
+       "location_name": "1111 XXXXXXXX XXXXX XX",
+       "parity": "X",
+       "country": "XX",
+       "route": "111",
+       "geocode_status": 1,
+       "zip_code": "11111",
+       "longitude": "-11.111111",
+       "display_address_3": "",
+       "state": "XX",
+       "location_uuid": "1111111111111111111",
+       "county_name": "",
+       "latitude": "11.111111",
+       "display_address_2": "",
+       "location_id": "111111-11111",
+       "display_address": "1111 XXXXXXXX XXXXX XX",
+       "display_street_name": "",
+       "cycle": ""
+      },
+      "alerts": {
+       "leak_alert": {
+        "alert_type": "XXXXXXXXXX_XXXX",
+        "name": "XXXXXXXXXX XXXX",
+        "residential_user_name": "XX.XXXX@XXXXX.XXX",
+        "date_updated": null,
+        "alert_uuid": "1111111111111111111",
+        "state": "XXXXXX",
+        "date_created": "1990-01-27T00:00:00",
+        "creator_user_uuid": "1111111111111111111"
+       }
+      },
+      "account": {
+       "status": "",
+       "first_name": "",
+       "billing_address": "1111 XXXXXXXX XXXXX XX",
+       "billing_city": "XXXX",
+       "account_uuid": "1111111111111111111",
+       "billing_address_2": "",
+       "full_name": "XXXX XXXXXXXXXX",
+       "email": "XX.XXXX@XXXXX.XXX",
+       "phone": "1111111111",
+       "portal_status": "",
+       "last_name": "",
+       "account_id": "11111-1111111111",
+       "class_code": "",
+       "billing_address_3": "",
+       "person_id": "",
+       "date_created": "1990-01-27T00:00:00",
+       "account_billing_cycle": "",
+       "billing_zip_code": "11111",
+       "billing_country": "XX",
+       "billing_state": "XX",
+       "eyeonwater": "XXX"
+      },
+      "meter": {
+       "sensors_available": {
+        "types": [
+         "XXXXXXXX_XXXXXXXXXXX"
+        ]
+       },
+       "has_endpoint": true,
+       "install_date": "1990-01-27T00:00:00",
+       "meter_uuid": "1111111111111111111",
+       "fluid_type": "XXXXX",
+       "timezone": "US/Central",
+       "firmware_version": "1.1.111",
+       "communication_security": "XXXXXXX",
+       "meter_size_unit": "XXXXXX",
+       "cell_type": "XXX-X",
+       "geocode_status": 1,
+       "geo": "11.111111,-11.111111",
+       "last_read_time": "1990-01-27T00:00:00",
+       "note": "",
+       "battery": {
+        "register": 1,
+        "level": 111,
+        "quality": "XXXX",
+        "thresh12mo": 11,
+        "time": "1990-01-27T00:00:00"
+       },
+       "endpoint_status": "XXXXXX",
+       "alert_code": 1,
+       "gas_pressure_compensation": 1,
+       "service_type": "X",
+       "serial_number": "111111111",
+       "type": "X",
+       "pwr": {
+        "level": 1,
+        "register": 1,
+        "signal_7days": 1,
+        "signal_strength": 1,
+        "time": "1990-01-27T00:00:00",
+        "quality": "XXXX",
+        "signal_30days": 11
+       },
+       "endpoint_connector": "XXXX",
+       "communication_seconds": 11111,
+       "meter_size_desc": "1",
+       "is_compound": "XX",
+       "latitude": "11.111111",
+       "typical_read_method": "XXXXXXX",
+       "endpoint_type": "XXXXX XXXXXXXX",
+       "meter_id": "111111111",
+       "last_communication_time": "1990-01-27T00:00:00",
+       "pit_type": "XXXXXXXXXXX",
+       "meter_spec_uuid": "1111111111111111111",
+       "manufacturer": "XXXXXXXXXXX",
+       "has_valve": false,
+       "has_sensor": true,
+       "gas_sub_count": 1,
+       "notes": {
+        "count": 1
+       },
+       "meter_size": 1,
+       "flow": {
+        "this_week": 42.0,
+        "months_updated": "1111-11-11X11:11:11.111111-11:11",
+        "last_month": 42.0,
+        "last_year_last_month_ratio": 42.0,
+        "last_year_last_month": 42.0,
+        "delta_positive": 111,
+        "time": "1990-01-27T00:00:00",
+        "time_positive": "1990-01-27T00:00:00",
+        "last_month_ratio": 42.0,
+        "last_week_avg": 42.0,
+        "last_year_this_month_ratio": 42.0,
+        "delta": 111,
+        "this_month": 42.0,
+        "week_ratio": 42.0,
+        "weeks_updated": "1990-01-27T00:00:00",
+        "last_year_this_month": 42.0,
+        "last_week": 42.0,
+        "this_week_avg": 42.0
+       },
+       "longitude": "-11.111111",
+       "flags": {
+        "active_flags": [],
+        "time": "1990-01-27T00:00:00"
+       },
+       "model": "",
+       "sequence_number": 11111
+      },
+      "service_agreement": {
+       "service_agreement_uuid": "1111111111111111111",
+       "start_date": "1990-01-27T00:00:00"
+      },
+      "version": "1",
+      "user": {
+       "user_uuid": "1111111111111111111",
+       "user_name": "XX.XXXX@XXXXX.XXX",
+       "date_created": "1990-01-27T00:00:00"
+      },
+      "groups": {
+       "irrigation": "XX",
+       "continuous_flow": "XX",
+       "is_irrigatable": "XX",
+       "disable_valve_shutoff": "XX"
+      },
+      "register_0": {
+       "battery": {
+        "register": 1,
+        "level": 111,
+        "quality": "XXXX",
+        "thresh12mo": 11,
+        "time": "1990-01-27T00:00:00"
+       },
+       "customer_uuid": "1111111111111111111",
+       "aggregation_seconds": 111,
+       "last_communication_time": "1990-01-27T00:00:00",
+       "firmware_version": "1.1.111",
+       "communication_security": "XXXXXXX",
+       "meter_size_desc": "1",
+       "barnacle_uuid": "1111111111111111111",
+       "unit": "GAL",
+       "customer_name": "XXXXX XXX # 11",
+       "cell_type": "XXX-X",
+       "pi_status": "",
+       "second_carrier": false,
+       "latest_read": {
+        "bill_read": "111.1111",
+        "bill_display_units": "KGAL",
+        "full_read": 42.0,
+        "read_time": "1990-01-27T00:00:00",
+        "has_endpoints": true,
+        "units": "GAL",
+        "method": "XXXXXXX"
+       },
+       "input_config": "XXXXXXX",
+       "meter_size_unit": "XXXXXX",
+       "endpoint_status": "XXXXXX",
+       "gas_pressure_compensation": 1,
+       "serial_number": "111111111",
+       "activated_on": "1990-01-27T00:00:00",
+       "sim_vendor": "XX",
+       "pwr": {
+        "level": 1,
+        "register": 1,
+        "signal_7days": 1,
+        "signal_strength": 1,
+        "time": "1990-01-27T00:00:00",
+        "quality": "XXXX",
+        "signal_30days": 11
+       },
+       "communication_seconds": 11111,
+       "cell_endpoint_name": "XXX-X",
+       "rf_communication": true,
+       "low_read_limit": 11111,
+       "utility_use_1": "111111",
+       "timeslots": {
+        "weekend": [
+         11111
+        ],
+        "weekday": [
+         11111,
+         11111,
+         11111,
+         11111
+        ]
+       },
+       "encoder": {
+        "time": "1990-01-27T00:00:00",
+        "dials": 1,
+        "register_id": "1111111111",
+        "totalizer": 111
+       },
+       "endpoint_type": "XXXXX XXXXXXXX",
+       "utility_use_2": "1",
+       "multiplier": "1.1111111111",
+       "sim_type": "XXXX",
+       "register_number": "XXXXXX",
+       "wired_interface": "XXXXXXX",
+       "endpoint_install_date": "1990-01-27T00:00:00",
+       "high_read_limit": 11111,
+       "gas_sub_count": 1,
+       "billing_number": "11111",
+       "meter_size": 1,
+       "flow": {
+        "this_week": 42.0,
+        "months_updated": "1111-11-11X11:11:11.111111-11:11",
+        "last_month": 42.0,
+        "last_year_last_month_ratio": 42.0,
+        "last_year_last_month": 42.0,
+        "delta_positive": 111,
+        "time": "1990-01-27T00:00:00",
+        "time_positive": "1990-01-27T00:00:00",
+        "last_month_ratio": 42.0,
+        "last_week_avg": 42.0,
+        "last_year_this_month_ratio": 42.0,
+        "delta": 111,
+        "this_month": 42.0,
+        "week_ratio": 42.0,
+        "weeks_updated": "1990-01-27T00:00:00",
+        "last_year_this_month": 42.0,
+        "last_week": 42.0,
+        "this_week_avg": 42.0
+       },
+       "hardware_version": "11111-111.1",
+       "connector_type": "XXXX",
+       "flags": {
+        "Forced": false,
+        "MagneticTamper": false,
+        "EmptyPipe": false,
+        "Leak": false,
+        "EncoderNoUsage": false,
+        "EncoderTemperature": false,
+        "EncoderReverseFlow": false,
+        "ReadingChanged": false,
+        "CoverRemoved": false,
+        "ProgrammingChanged": false,
+        "EncoderExceedingMaxFlow": false,
+        "WaterTemperatureSensorError": false,
+        "OscillatorFailure": false,
+        "EncoderSensorError": false,
+        "Tamper": false,
+        "ReverseFlow": false,
+        "EncoderLeak": false,
+        "LowBattery": false,
+        "WaterPressureSensorError": false,
+        "MinMaxInvalid": false,
+        "EndOfLife": false,
+        "EncoderDialChange": false,
+        "NoUsage": false,
+        "BatteryCharging": false,
+        "DeviceAlert": false,
+        "EndpointReadingMissed": false,
+        "EncoderRemoval": false,
+        "ProfileReadError": false,
+        "EncoderProgrammed": false,
+        "time": "1990-01-27T00:00:00",
+        "EncoderMagneticTamper": false,
+        "MeterTemperatureSensorError": false
+       },
+       "model": "",
+       "resolution": 42.0
+      },
+      "sensors": {
+       "endpoint_temperature": {
+        "latest_average": 11,
+        "last_reported": "1990-01-27T00:00:00",
+        "seven_day_min": "11.1",
+        "seven_day_average": "11.1",
+        "seven_day_max": "11.1",
+        "sensor_uuid": "1111111111111111111",
+        "conditions": {
+         "increasing": false,
+         "decreasing": false
+        }
+       }
+      },
+      "utility": {
+       "fluid_barrel_billing_unit": "XXXXX_XXXXXX",
+       "cm_billing_unit": "CM",
+       "cf_billing_unit": "CCF",
+       "type": "XXXXXX",
+       "utility_name": "XXXXX XXX # 11",
+       "eow_service_selector": "XXXX",
+       "gas_cf_billing_unit": "CCF",
+       "eow_type": "XXXXXXX",
+       "oil_barrel_billing_unit": "XXX_XXXXXX",
+       "date_created": "1990-01-27T00:00:00",
+       "gal_billing_unit": "X1111",
+       "gas_cm_billing_unit": "CM",
+       "utility_uuid": "1111111111111111111",
+       "imp_billing_unit": "XXX1"
+      }
+     },
+     "_index": "XXXXXXXX_X1"
+    }
+   ],
+   "total": {
+    "relation": "XX",
+    "value": 1
+   },
+   "max_score": 1
+  },
+  "facets": [],
+  "stats": {
+   "count": 1,
+   "query_time": 1
+  },
+  "took": 1,
+  "aggs": []
+ },
+ "stats": {
+  "count": 1,
+  "query_time": "1.111"
+ }
+}
