@@ -102,13 +102,12 @@ mock_read_meter_endpoint = build_data_endpoint("read_meter_mock_anonymized")
 mock_historical_data_endpoint = build_data_endpoint("historical_data_mock_anonymized")
 
 
-async def build_client(websession, metric: bool = False) -> tuple[Account, Client]:
+async def build_client(websession) -> tuple[Account, Client]:
     """Build authenticated client."""
     account = Account(
         eow_hostname="",
         username="user",
         password="",
-        metric_measurement_system=metric,
     )
 
     client = Client(websession=websession, account=account)

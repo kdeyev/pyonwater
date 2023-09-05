@@ -8,3 +8,4 @@ from .exceptions import EyeOnWaterAuthError  # noqa
 from .meter import Meter  # noqa
 from .meter_reader import MeterReader  # noqa
 from .models import *  # noqa
+from .units import *  # noqa

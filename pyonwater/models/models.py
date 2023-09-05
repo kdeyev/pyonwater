@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .units import EOWUnits
+
 if TYPE_CHECKING:
     from datetime import datetime
 
@@ -15,3 +17,4 @@ class DataPoint:
 
     dt: datetime
     reading: float
+    unit: EOWUnits

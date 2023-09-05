@@ -25,13 +25,11 @@ class Account:
         eow_hostname: str,
         username: str,
         password: str,
-        metric_measurement_system: bool,
     ) -> None:
         """Initialize the account."""
         self.eow_hostname = eow_hostname
         self.username = username
         self.password = password
-        self.metric_measurement_system = metric_measurement_system
 
     async def fetch_meter_readers(self, client: Client) -> list[MeterReader]:
         """List the meter readers associated with the account."""
@@ -56,7 +54,6 @@ class Account:
                     meter = MeterReader(
                         meter_uuid=meter_uuid,
                         meter_id=meter_id,
-                        metric_measurement_system=self.metric_measurement_system,
                     )
                     meters.append(meter)
 

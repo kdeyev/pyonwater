@@ -30,14 +30,14 @@ mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
 )
 
 
-@pytest.mark.parametrize(
-    ("metric", "expected_units"),
-    [
-        (False, "gal"),
-        (True, "m\u00b3"),
-    ],
-)
-async def test_meter_expected_units(aiohttp_client, loop, metric, expected_units):
+# @pytest.mark.parametrize(
+#     (", "expected_units"),
+#     [
+#         (False, "gal"),
+#         (True, "m\u00b3"),
+#     ],
+# )
+async def test_meter_info(aiohttp_client, loop):
     """Test meter returns expected units."""
     app = web.Application()
 
@@ -47,26 +47,29 @@ async def test_meter_expected_units(aiohttp_client, loop, metric, expected_units
 
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession, metric=metric)
+    account, client = await build_client(websession)
 
-    meter_reader = MeterReader(
-        meter_uuid="meter_uuid",
-        meter_id="meter_id",
-        metric_measurement_system=account.metric_measurement_system,
-    )
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
     meter = Meter(meter_reader)
 
     assert meter.meter_id is not None
     assert meter.meter_uuid is not None
 
-    assert meter.native_unit_of_measurement == expected_units
+    # Access meter before reading
+    with pytest.raises(EyeOnWaterException):
+        assert meter.reading
+    with pytest.raises(EyeOnWaterException):
+        assert meter.meter_info
+
+    # Read meter info
+    await meter.read_meter_info(client=client)
+    assert meter.reading != 0
+    assert meter.meter_info is not None
 
 
-async def test_meter(aiohttp_client, loop):
+async def test_meter_historical_data(aiohttp_client, loop):
     """Basic meter test."""
-    metric = False
-
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
@@ -75,36 +78,25 @@ async def test_meter(aiohttp_client, loop):
         mock_historical_data_nodata_endpoint,
     )
     websession = await aiohttp_client(app)
-    account, client = await build_client(websession, metric=metric)
-    meter_reader = MeterReader(
-        meter_uuid="meter_uuid",
-        meter_id="meter_id",
-        metric_measurement_system=metric,
-    )
+    account, client = await build_client(websession)
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
     meter = Meter(meter_reader)
 
-    # Access meter before reading
-    with pytest.raises(EyeOnWaterException):
-        assert meter.reading
-    with pytest.raises(EyeOnWaterException):
-        assert meter.meter_info
-
-    # Read meter with no historical data
-    await meter.read_meter(client=client, days_to_load=1)
-    assert meter.reading != 0
-    assert meter.meter_info is not None
+    # Read historical data with no data
+    await meter.read_historical_data(client=client, days_to_load=1)
+    assert meter.last_historical_data == []
 
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
     websession = await aiohttp_client(app)
-    account, client = await build_client(websession, metric=metric)
+    account, client = await build_client(websession)
 
     # Read meter with some historical
-    await meter.read_meter(client=client, days_to_load=1)
-    assert meter.reading != 0
-    assert meter.meter_info is not None
+    await meter.read_historical_data(client=client, days_to_load=1)
+    assert len(meter.last_historical_data) == 1
+    assert meter.last_historical_data[0].reading == 42.0
 
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -114,12 +106,12 @@ async def test_meter(aiohttp_client, loop):
         mock_historical_data_newer_data_endpoint,
     )
     websession = await aiohttp_client(app)
-    account, client = await build_client(websession, metric=metric)
+    account, client = await build_client(websession)
 
     # Read meter with newer historical
-    await meter.read_meter(client=client, days_to_load=1)
-    assert meter.reading != 0
-    assert meter.meter_info is not None
+    await meter.read_historical_data(client=client, days_to_load=1)
+    assert len(meter.last_historical_data) == 1
+    assert meter.last_historical_data[0].reading == 42.42
 
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -129,15 +121,15 @@ async def test_meter(aiohttp_client, loop):
         mock_historical_data_newerdata_moredata_endpoint,
     )
     websession = await aiohttp_client(app)
-    account, client = await build_client(websession, metric=metric)
+    account, client = await build_client(websession)
 
     # Read meter with more historical
-    await meter.read_meter(client=client, days_to_load=1)
-    assert meter.reading != 0
-    assert meter.meter_info is not None
+    await meter.read_historical_data(client=client, days_to_load=1)
+    assert len(meter.last_historical_data) == 2
+    assert meter.last_historical_data[0].reading == 42.42
+    assert meter.last_historical_data[1].reading == 42.42
 
 
-@pytest.mark.parametrize("metric", [False, True])
 @pytest.mark.parametrize(
     "units",
     [
@@ -152,7 +144,7 @@ async def test_meter(aiohttp_client, loop):
         "CUBIC_METER",
     ],
 )
-async def test_meter_units(aiohttp_client, loop, metric, units):
+async def test_meter_units(aiohttp_client, loop, units):
     """Test handling data with different units."""
     app = web.Application()
 
@@ -168,16 +160,12 @@ async def test_meter_units(aiohttp_client, loop, metric, units):
 
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession, metric=metric)
+    account, client = await build_client(websession)
 
-    meter_reader = MeterReader(
-        meter_uuid="meter_uuid",
-        meter_id="meter_id",
-        metric_measurement_system=account.metric_measurement_system,
-    )
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
     meter = Meter(meter_reader)
-    await meter.read_meter(client=client)
+    await meter.read_meter_info(client=client)
 
     assert meter.reading != 0
     assert meter.meter_id is not None
@@ -185,7 +173,6 @@ async def test_meter_units(aiohttp_client, loop, metric, units):
     assert meter.meter_info is not None
 
 
-@pytest.mark.parametrize("metric", [False, True])
 @pytest.mark.parametrize(
     "units",
     [
@@ -200,7 +187,7 @@ async def test_meter_units(aiohttp_client, loop, metric, units):
         "CUBIC_METER",
     ],
 )
-async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, units):
+async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, units):
     """Test handling data with different units of historical data."""
     app = web.Application()
 
@@ -213,20 +200,21 @@ async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, un
 
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession, metric=metric)
+    account, client = await build_client(websession)
 
-    meter_reader = MeterReader(
-        meter_uuid="meter_uuid",
-        meter_id="meter_id",
-        metric_measurement_system=account.metric_measurement_system,
-    )
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
     meter = Meter(meter_reader)
-    await meter.read_meter(client=client)
-    assert meter.reading != 0
+    await meter.read_historical_data(client=client, days_to_load=1)
+    assert meter.last_historical_data
+
+    # Meter info is not available
+    with pytest.raises(EyeOnWaterException):
+        assert meter.reading
+    with pytest.raises(EyeOnWaterException):
+        assert meter.meter_info
 
 
-@pytest.mark.parametrize("metric", [False, True])
 @pytest.mark.parametrize(
     "units",
     [
@@ -241,7 +229,7 @@ async def test_meter_wrong_unit_historical_data(aiohttp_client, loop, metric, un
         "CUBIC_METER",
     ],
 )
-async def test_meter_wrong_unit_reading(aiohttp_client, loop, metric, units):
+async def test_meter_wrong_unit_reading(aiohttp_client, loop, units):
     """Test handling data with different units of reading."""
     app = web.Application()
 
@@ -254,14 +242,13 @@ async def test_meter_wrong_unit_reading(aiohttp_client, loop, metric, units):
 
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession, metric=metric)
+    account, client = await build_client(websession)
 
-    meter_reader = MeterReader(
-        meter_uuid="meter_uuid",
-        meter_id="meter_id",
-        metric_measurement_system=account.metric_measurement_system,
-    )
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
     meter = Meter(meter_reader)
-    await meter.read_meter(client=client)
+    await meter.read_meter_info(client=client)
     assert meter.reading != 0
+
+    # No historical data
+    assert meter.last_historical_data == []

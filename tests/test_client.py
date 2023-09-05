@@ -24,7 +24,6 @@ async def test_client(aiohttp_client, loop):
         eow_hostname="",
         username="user",
         password="",
-        metric_measurement_system=False,
     )
 
     client = Client(websession=websession, account=account)
@@ -49,7 +48,6 @@ async def test_client_403(aiohttp_client, loop):
         eow_hostname="",
         username="user",
         password="",
-        metric_measurement_system=False,
     )
 
     client = Client(websession=websession, account=account)
@@ -72,7 +70,6 @@ async def test_client_400(aiohttp_client, loop):
         eow_hostname="",
         username="user",
         password="",
-        metric_measurement_system=False,
     )
 
     client = Client(websession=websession, account=account)
@@ -96,7 +93,6 @@ async def test_client_data_403(aiohttp_client, loop):
         eow_hostname="",
         username="user",
         password="",
-        metric_measurement_system=False,
     )
 
     client = Client(websession=websession, account=account)
@@ -122,7 +118,6 @@ async def test_client_data_401(aiohttp_client, loop):
         eow_hostname="",
         username="user",
         password="",
-        metric_measurement_system=False,
     )
 
     client = Client(websession=websession, account=account)
@@ -148,7 +143,6 @@ async def test_client_data_404(aiohttp_client, loop):
         eow_hostname="",
         username="user",
         password="",
-        metric_measurement_system=False,
     )
 
     client = Client(websession=websession, account=account)

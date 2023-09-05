@@ -10,7 +10,7 @@ from pydantic import ValidationError
 import pytz
 
 from .exceptions import EyeOnWaterAPIError, EyeOnWaterResponseIsEmpty
-from .models import DataPoint, EOWUnits, HistoricalData, MeterInfo
+from .models import DataPoint, HistoricalData, MeterInfo
 
 if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
@@ -23,85 +23,13 @@ CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
 _LOGGER = logging.getLogger(__name__)
 
 
-CF_TO_GAL = 7.48052
-CM_TO_CF = 35.3147
-CM_TO_GAL = 264.17207058602
-GAL_TO_CM = 0.00378541
-CF_TO_CM = 0.0283168332467544186
-
-
-def convert_to_cm(read_unit: str, value: float) -> float:
-    """Convert read units to m^3."""
-    if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
-        pass
-    elif read_unit == EOWUnits.MEASUREMENT_KILOGALLONS:
-        value = value * 1000 * GAL_TO_CM
-    elif read_unit == EOWUnits.MEASUREMENT_100_GALLONS:
-        value = value * 100 * GAL_TO_CM
-    elif read_unit == EOWUnits.MEASUREMENT_10_GALLONS:
-        value = value * 10 * GAL_TO_CM
-    elif read_unit == EOWUnits.MEASUREMENT_GALLONS:
-        value = value * GAL_TO_CM
-    elif read_unit == EOWUnits.MEASUREMENT_CCF:
-        value = value * CF_TO_CM * 100
-    elif read_unit in [
-        EOWUnits.MEASUREMENT_CF,
-        EOWUnits.MEASUREMENT_CUBIC_FEET,
-    ]:
-        value = value * CF_TO_CM
-    else:
-        msg = f"Unsupported measurement unit: {read_unit}"
-        raise EyeOnWaterAPIError(
-            msg,
-        )
-    return value
-
-
-def convert_to_gal(read_unit: str, value: float) -> float:
-    """Convert read units to gallons."""
-    if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
-        value = value * CM_TO_GAL
-    elif read_unit == EOWUnits.MEASUREMENT_KILOGALLONS:
-        value = value * 1000
-    elif read_unit == EOWUnits.MEASUREMENT_100_GALLONS:
-        value = value * 100
-    elif read_unit == EOWUnits.MEASUREMENT_10_GALLONS:
-        value = value * 10
-    elif read_unit == EOWUnits.MEASUREMENT_GALLONS:
-        pass
-    elif read_unit == EOWUnits.MEASUREMENT_CCF:
-        value = value * CF_TO_GAL * 100
-    elif read_unit in [
-        EOWUnits.MEASUREMENT_CF,
-        EOWUnits.MEASUREMENT_CUBIC_FEET,
-    ]:
-        value = value * CF_TO_GAL
-    else:
-        msg = f"Unsupported measurement unit: {read_unit}"
-        raise EyeOnWaterAPIError(
-            msg,
-        )
-
-    return value
-
-
 class MeterReader:
     """Class represents meter reader."""
 
-    def __init__(
-        self,
-        meter_uuid: str,
-        meter_id: str,
-        metric_measurement_system: bool,
-    ) -> None:
+    def __init__(self, meter_uuid: str, meter_id: str) -> None:
         """Initialize the meter."""
         self.meter_uuid = meter_uuid
         self.meter_id: str = meter_id
-
-        self.metric_measurement_system = metric_measurement_system
-        self.native_unit_of_measurement = (
-            "m\u00b3" if self.metric_measurement_system else "gal"
-        )
 
     async def read_meter(self, client: Client) -> MeterInfo:
         """Triggers an on-demand meter read and returns it when complete."""
@@ -123,17 +51,8 @@ class MeterReader:
 
         return meter_info
 
-    def convert(self, read_unit: str, value: float) -> float:
-        """Convert reading to Cubic Meter or Gallons."""
-        if self.metric_measurement_system:
-            return convert_to_cm(read_unit, value)
-        else:
-            return convert_to_gal(read_unit, value)
-
     async def read_historical_data(
-        self,
-        client: Client,
-        days_to_load: int,
+        self, client: Client, days_to_load: int
     ) -> list[DataPoint]:
         """Retrieve historical data for today and past N days."""
         today = datetime.datetime.now().replace(
@@ -158,8 +77,7 @@ class MeterReader:
             )
             try:
                 statistics += await self.read_historical_data_one_day(
-                    date=date,
-                    client=client,
+                    client=client, date=date
                 )
             except EyeOnWaterResponseIsEmpty:
                 continue
@@ -172,16 +90,11 @@ class MeterReader:
         date: datetime.datetime,
     ) -> list[DataPoint]:
         """Retrieve the historical hourly water readings for a requested day."""
-        if self.metric_measurement_system:
-            units = "CM"
-        else:
-            units = self.native_unit_of_measurement.upper()
-
         query = {
             "params": {
                 "source": "barnacle",
                 "aggregate": "hourly",
-                "units": units,
+                "units": "cm",  # This parameter seems to be ignored and does not affect the output values :-)
                 "combine": "true",
                 "perspective": "billing",
                 "display_minutes": True,
@@ -215,11 +128,11 @@ class MeterReader:
         ts = data.timeseries[key].series
         statistics = []
         for d in ts:
-            response_unit = d.display_unit.upper()
             statistics.append(
                 DataPoint(
                     dt=timezone.localize(d.date),
-                    reading=self.convert(response_unit, d.bill_read),
+                    reading=d.bill_read,
+                    unit=d.display_unit,
                 ),
             )
 

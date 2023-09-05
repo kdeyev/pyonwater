@@ -17,3 +17,11 @@ class EOWUnits(str, Enum):
     MEASUREMENT_KILOGALLONS = "KGAL"
     MEASUREMENT_CM = "CM"
     MEASUREMENT_CUBICMETERS = "CUBIC_METER"
+
+
+class NativeUnits(str, Enum):
+    """Enum of supported native units."""
+
+    GAL = "gal"
+    CF = "cf"
+    CM = "cm"

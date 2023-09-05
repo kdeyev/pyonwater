@@ -5,25 +5,17 @@ import logging
 from typing import TYPE_CHECKING
 
 from .exceptions import EyeOnWaterException
+from .models import DataPoint
 
 if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
     from .meter_reader import MeterReader
-    from .models import DataPoint, MeterInfo, Reading
+    from .models import MeterInfo, Reading
 
     pass
 
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
 CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
-
-MEASUREMENT_GALLONS = "GAL"
-MEASUREMENT_100_GALLONS = "100 GAL"
-MEASUREMENT_10_GALLONS = "10 GAL"
-MEASUREMENT_CF = ["CF", "CUBIC_FEET"]
-MEASUREMENT_CCF = "CCF"
-MEASUREMENT_KILOGALLONS = "KGAL"
-MEASUREMENT_CUBICMETERS = ["CM", "CUBIC_METER"]
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,20 +41,15 @@ class Meter:
         """Return meter ID."""
         return self.reader.meter_id
 
-    @property
-    def native_unit_of_measurement(self) -> str:
-        """Return native measurement unit: [m^3, gal]."""
-        return self.reader.native_unit_of_measurement
-
-    async def read_meter(self, client: Client, days_to_load: int = 3) -> None:
-        """Triggers an on-demand meter read and returns it when complete."""
+    async def read_meter_info(self, client: Client) -> None:
+        """Read the latest meter info."""
         self._meter_info = await self.reader.read_meter(client)
         self._reading_data = self._meter_info.reading
 
-        # TODO: identify missing days and request only missing dates.
+    async def read_historical_data(self, client: Client, days_to_load: int) -> None:
+        """Read historical data for N last days."""
         historical_data = await self.reader.read_historical_data(
-            days_to_load=days_to_load,
-            client=client,
+            client=client, days_to_load=days_to_load
         )
         if not self.last_historical_data:
             self.last_historical_data = historical_data
@@ -87,10 +74,12 @@ class Meter:
         return self._meter_info
 
     @property
-    def reading(self) -> float:
-        """Returns the latest meter reading in me^3 or gal."""
+    def reading(self) -> DataPoint:
+        """Returns the latest meter reading."""
         if not self._reading_data:
             msg = "Data was not fetched"
             raise EyeOnWaterException(msg)
         reading = self._reading_data.latest_read
-        return self.reader.convert(reading.units, reading.full_read)
+        return DataPoint(
+            dt=reading.read_time, reading=reading.full_read, unit=reading.units
+        )
