@@ -3,6 +3,7 @@ from typing import Any
 
 from aiohttp import web
 
+from pyonwater import Account, Client
 from pyonwater.models import EOWUnits
 
 
@@ -16,6 +17,7 @@ def is_unit(string: str) -> bool:
 
 
 def replace_units(data: Any, new_unit: str) -> Any:
+    """Replace EOW units in JSON recursively"""
     if isinstance(data, dict):
         for k in data:
             data[k] = replace_units(data[k], new_unit)
@@ -30,13 +32,14 @@ def replace_units(data: Any, new_unit: str) -> Any:
         return data
 
 
-async def mock_signin_enpoint(request):
-    """Mock for sign in HTTP call"""
+async def mock_signin_endpoint(request):
+    """Sign in HTTP endpoint mock"""
     resp = web.Response(text="Hello, world", headers={"cookies": "key=val"})
     return resp
 
 
 def mock_get_meters_endpoint(request):
+    """Fetch meters endpoit mock"""
     data = """  AQ.Views.MeterPicker.meters = [{"display_address": "", "": "", "meter_uuid": "123", "meter_id": "456", "city": "", "location_name": "", "has_leak": false, "state": "", "serial_number": "789", "utility_uuid": "123", "page": 1, "zip_code": ""}];
             junk"""
 
@@ -44,6 +47,8 @@ def mock_get_meters_endpoint(request):
 
 
 def build_data_endpoint(filename: str):
+    """ "Build an endpoint with data coming from mock data file"""
+
     def read_data(request):
         with open(f"tests//mock_data/{filename}.json") as f:
             return web.Response(text=f.read())
@@ -52,6 +57,8 @@ def build_data_endpoint(filename: str):
 
 
 def build_data_with_units_endpoint(filename: str, units: str):
+    """ "Build an endpoint with data coming from mock data file and specific unit"""
+
     def read_data(request):
         with open(f"tests//mock_data/{filename}.json") as f:
             data = json.load(f)
@@ -61,23 +68,9 @@ def build_data_with_units_endpoint(filename: str, units: str):
     return read_data
 
 
-# def mock_historical_data_endpoint(request):
-#     """Mock for historical datas request"""
-#     with open("tests//mock_data/historical_data_mock_anonymized.json") as f:
-#         return web.Response(text=f.read())
-
-
-# def mock_read_meter_custom_units(new_unit):
-#     def mock_read_meter(request):
-#         with open("tests//mock_data/read_meter_mock_anonymized.json") as f:
-#             data = json.load(f)
-#             data = replace_units(data, new_unit)
-#             return web.Response(text=json.dumps(data))
-
-#     return mock_read_meter
-
-
 def change_units_decorator(endpoint, new_unit):
+    """Decorator for replacing EOW units in another endpoint response"""
+
     def change_units_endpoint(request):
         resp = endpoint(request)
         data = json.loads(resp.text)
@@ -89,6 +82,8 @@ def change_units_decorator(endpoint, new_unit):
 
 
 def add_error_decorator(endpoint, code: int):
+    """Decorator for adding one error to another endpoint. The second call will be successful"""
+
     counter = 0
 
     def mock(request):
@@ -103,58 +98,21 @@ def add_error_decorator(endpoint, code: int):
 
 
 """Mock for read meter request"""
-mock_read_meter_endpont = build_data_endpoint("read_meter_mock_anonymized")
+mock_read_meter_endpoint = build_data_endpoint("read_meter_mock_anonymized")
 
 """Mock for historical data request"""
 mock_historical_data_endpoint = build_data_endpoint("historical_data_mock_anonymized")
 
-"""Mock for historical data request, but no actual data"""
-mock_historical_data_nodata_endpoint = build_data_endpoint(
-    "historical_data_mock_anonymized_nodata"
-)
 
-"""Mock for historical data request, but newer data"""
-mock_historical_data_newer_data_endpoint = build_data_endpoint(
-    "historical_data_mock_anonymized_newer_data"
-)
+async def build_client(websession, metric: bool = False) -> tuple[Account, Client]:
+    """Build authenticated client"""
+    account = Account(
+        eow_hostname="",
+        username="user",
+        password="",
+        metric_measurement_system=metric,
+    )
 
-"""Mock for historical data request, but newer and more data"""
-mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
-    "historical_data_mock_anonymized_newer_data_moredata"
-)
-
-# def mock_historical_nodata(request):
-#     with open("tests//mock_data/historical_data_mock_anonymized_nodata.json") as f:
-#         return web.Response(text=f.read())
-
-
-# def mock_historical_newerdata(request):
-#     with open("tests//mock_data/historical_data_mock_anonymized_newer_data.json") as f:
-#         return web.Response(text=f.read())
-
-
-# def mock_historical_newerdata_moredata(request):
-#     with open(
-#         "tests//mock_data/historical_data_mock_anonymized_newer_data_moredata.json"
-#     ) as f:
-#         return web.Response(text=f.read())
-
-
-# def mock_read_meter_custom_units(new_unit):
-#     def mock_read_meter(request):
-#         with open("tests//mock_data/read_meter_mock_anonymized.json") as f:
-#             data = json.load(f)
-#             data = replace_units(data, new_unit)
-#             return web.Response(text=json.dumps(data))
-
-#     return mock_read_meter
-
-
-# def mock_historical_data_custom_units(new_unit):
-#     def mock_read_meter(request):
-#         with open("tests//mock_data/historical_data_mock_anonymized.json") as f:
-#             data = json.load(f)
-#             data = replace_units(data, new_unit)
-#             return web.Response(text=json.dumps(data))
-
-#     return mock_read_meter
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+    return account, client

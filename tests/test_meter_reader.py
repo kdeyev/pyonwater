@@ -3,34 +3,28 @@
 
 from aiohttp import web
 from conftest import (
+    build_client,
     change_units_decorator,
     mock_historical_data_endpoint,
-    mock_read_meter_endpont,
-    mock_signin_enpoint,
+    mock_read_meter_endpoint,
+    mock_signin_endpoint,
 )
 import pytest
 
-from pyonwater import Account, Client, EyeOnWaterAPIError, MeterReader
+from pyonwater import EyeOnWaterAPIError, MeterReader
 
 
 async def test_meter_reader(aiohttp_client, loop):
+    """Basic meter reader test"""
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin_enpoint)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpont)
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
 
     websession = await aiohttp_client(app)
 
-    account = Account(
-        eow_hostname="",
-        username="user",
-        password="",
-        metric_measurement_system=False,
-    )
-
-    client = Client(websession=websession, account=account)
-    await client.authenticate()
+    account, client = await build_client(websession)
 
     meter_reader = MeterReader(
         meter_uuid="meter_uuid",
@@ -45,26 +39,18 @@ async def test_meter_reader(aiohttp_client, loop):
 
 
 async def test_meter_reader_wrong_units(aiohttp_client, loop):
+    """Test reading date with unknown units"""
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin_enpoint)
+    app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post(
         "/api/2/residential/new_search",
-        change_units_decorator(mock_read_meter_endpont, "hey"),
+        change_units_decorator(mock_read_meter_endpoint, "hey"),
     )
-    # app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
 
     websession = await aiohttp_client(app)
 
-    account = Account(
-        eow_hostname="",
-        username="user",
-        password="",
-        metric_measurement_system=False,
-    )
-
-    client = Client(websession=websession, account=account)
-    await client.authenticate()
+    account, client = await build_client(websession)
 
     meter_reader = MeterReader(
         meter_uuid="meter_uuid",
