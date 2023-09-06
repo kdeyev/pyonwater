@@ -6,21 +6,21 @@ from .models import EOWUnits, NativeUnits
 def deduce_native_units(read_unit: EOWUnits) -> NativeUnits:
     """Deduce native units based on oew units"""
 
-    if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
-        return NativeUnits.CM
+    if read_unit in [EOWUnits.UNIT_CUBIC_METER, EOWUnits.UNIT_CM]:
+        return NativeUnits.cm
     elif read_unit in [
-        EOWUnits.MEASUREMENT_GALLONS,
-        EOWUnits.MEASUREMENT_10_GALLONS,
-        EOWUnits.MEASUREMENT_100_GALLONS,
-        EOWUnits.MEASUREMENT_KILOGALLONS,
+        EOWUnits.UNIT_GAL,
+        EOWUnits.UNIT_10_GAL,
+        EOWUnits.UNIT_100_GAL,
+        EOWUnits.UNIT_KGAL,
     ]:
-        return NativeUnits.GAL
+        return NativeUnits.gal
     elif read_unit in [
-        EOWUnits.MEASUREMENT_CCF,
-        EOWUnits.MEASUREMENT_CF,
-        EOWUnits.MEASUREMENT_CUBIC_FEET,
+        EOWUnits.UNIT_CCF,
+        EOWUnits.UNIT_CF,
+        EOWUnits.UNIT_CUBIC_FEET,
     ]:
-        return NativeUnits.CF
+        return NativeUnits.cf
     else:
         msg = f"Unsupported measurement unit: {read_unit}"
         raise EyeOnWaterUnitError(
@@ -33,28 +33,28 @@ def convert_to_native(  # noqa: C901
 ) -> float:
     """Convert read units to native unit."""
 
-    if native_unit == NativeUnits.CM:
-        if read_unit in [EOWUnits.MEASUREMENT_CUBICMETERS, EOWUnits.MEASUREMENT_CM]:
+    if native_unit == NativeUnits.cm:
+        if read_unit in [EOWUnits.UNIT_CUBIC_METER, EOWUnits.UNIT_CM]:
             return value
         else:
             msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
             raise EyeOnWaterUnitError(msg)
-    elif native_unit == NativeUnits.GAL:
-        if read_unit == EOWUnits.MEASUREMENT_KILOGALLONS:
+    elif native_unit == NativeUnits.gal:
+        if read_unit == EOWUnits.UNIT_KGAL:
             return value * 1000
-        elif read_unit == EOWUnits.MEASUREMENT_100_GALLONS:
+        elif read_unit == EOWUnits.UNIT_100_GAL:
             return value * 100
-        elif read_unit == EOWUnits.MEASUREMENT_10_GALLONS:
+        elif read_unit == EOWUnits.UNIT_10_GAL:
             return value * 10
-        elif read_unit == EOWUnits.MEASUREMENT_GALLONS:
+        elif read_unit == EOWUnits.UNIT_GAL:
             return value
         else:
             msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
             raise EyeOnWaterUnitError(msg)
-    elif native_unit == NativeUnits.CF:
-        if read_unit == EOWUnits.MEASUREMENT_CCF:
+    elif native_unit == NativeUnits.cf:
+        if read_unit == EOWUnits.UNIT_CCF:
             return value * 100
-        elif read_unit in [EOWUnits.MEASUREMENT_CF, EOWUnits.MEASUREMENT_CUBIC_FEET]:
+        elif read_unit in [EOWUnits.UNIT_CF, EOWUnits.UNIT_CUBIC_FEET]:
             return value
         else:
             msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"

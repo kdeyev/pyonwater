@@ -62,4 +62,9 @@ class Account:
     async def fetch_meters(self, client: Client) -> list[Meter]:
         """List the meter states associated with the account."""
         meter_readers = await self.fetch_meter_readers(client)
-        return [Meter(reader) for reader in meter_readers]
+        meters: list[Meter] = []
+        for reader in meter_readers:
+            meter_info = await reader.read_meter_info(client)
+            meters.append(Meter(reader, meter_info))
+
+        return meters

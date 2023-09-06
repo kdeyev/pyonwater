@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from .exceptions import EyeOnWaterException
 from .models import DataPoint
+from .units import EOWUnits, convert_to_native, deduce_native_units
 
 if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
@@ -23,13 +24,18 @@ _LOGGER = logging.getLogger(__name__)
 class Meter:
     """Class represents meter state."""
 
-    def __init__(self, reader: MeterReader) -> None:
+    def __init__(self, reader: MeterReader, meter_info: MeterInfo) -> None:
         """Initialize the meter."""
         self.reader = reader
         self.last_historical_data: list[DataPoint] = []
 
         self._reading_data: Reading | None = None
-        self._meter_info: MeterInfo | None = None
+        self._meter_info = meter_info
+        self._reading_data = self._meter_info.reading
+
+        self._native_unit_of_measurement = deduce_native_units(
+            self._meter_info.reading.latest_read.units
+        )
 
     @property
     def meter_uuid(self) -> str:
@@ -41,9 +47,14 @@ class Meter:
         """Return meter ID."""
         return self.reader.meter_id
 
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return native measurement units."""
+        return self._native_unit_of_measurement
+
     async def read_meter_info(self, client: Client) -> None:
         """Read the latest meter info."""
-        self._meter_info = await self.reader.read_meter(client)
+        self._meter_info = await self.reader.read_meter_info(client)
         self._reading_data = self._meter_info.reading
 
     async def read_historical_data(self, client: Client, days_to_load: int) -> None:
@@ -51,6 +62,9 @@ class Meter:
         historical_data = await self.reader.read_historical_data(
             client=client, days_to_load=days_to_load
         )
+
+        historical_data = [self._convert_to_native(dp) for dp in historical_data]
+
         if not self.last_historical_data:
             self.last_historical_data = historical_data
         elif (
@@ -80,6 +94,17 @@ class Meter:
             msg = "Data was not fetched"
             raise EyeOnWaterException(msg)
         reading = self._reading_data.latest_read
-        return DataPoint(
+        dp = DataPoint(
             dt=reading.read_time, reading=reading.full_read, unit=reading.units
+        )
+
+        return self._convert_to_native(dp)
+
+    def _convert_to_native(self, dp: DataPoint) -> DataPoint:
+        """Convert data point to meters native units"""
+        native_reading = convert_to_native(
+            self._native_unit_of_measurement, EOWUnits(dp.unit), dp.reading
+        )
+        return DataPoint(
+            dt=dp.dt, reading=native_reading, unit=self._native_unit_of_measurement
         )

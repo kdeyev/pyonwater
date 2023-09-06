@@ -75,7 +75,7 @@
      {
       "bill_read": 42.42,
       "end_date": "1990-01-28T00:00:00",
-      "display_unit": "KGAL",
+      "display_unit": "GAL",
       "meter_uuid": 1111111111111111111,
       "value": 42.42,
       "start_date": "1990-01-28T00:00:00",
