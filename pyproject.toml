@@ -2,7 +2,7 @@
 name = "pyonwater"
 version = "0.3.0-beta.2"
 description = "EyeOnWater client library."
-authors = ["Konstantin Deev <kn.deev@gmail.com>"]
+authors = []
 license = "MIT"
 readme = "README.md"
 
