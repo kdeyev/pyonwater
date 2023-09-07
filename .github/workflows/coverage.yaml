@@ -50,4 +50,26 @@ jobs:
       #    run test suite and output coverage file
       #----------------------------------------------
       - name: Test with pytest
-        run: poetry run pytest --cov-fail-under=90 --cov=. --cov-report=xml  --cov-report=term
+        # run: poetry run pytest --cov-fail-under=90 --cov=. --cov-report=xml  --cov-report=term
+        run: poetry run coverage run -m pytest tests
+
+      - name: Upload coverage data to coveralls.io
+        run: |
+          pip3 install --upgrade coveralls
+          coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_PARALLEL: true
+
+  coveralls:
+    name: Indicate completion to coveralls.io
+    needs: codecov
+    runs-on: ubuntu-latest
+    container: python:3-slim
+    steps:
+    - name: Finished
+      run: |
+        pip3 install --upgrade coveralls
+        coveralls --service=github --finish
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
