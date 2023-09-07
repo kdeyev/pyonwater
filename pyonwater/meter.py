@@ -50,7 +50,7 @@ class Meter:
     @property
     def native_unit_of_measurement(self) -> str:
         """Return native measurement units."""
-        return self._native_unit_of_measurement
+        return self._native_unit_of_measurement.value
 
     async def read_meter_info(self, client: Client) -> None:
         """Read the latest meter info."""
