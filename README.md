@@ -6,7 +6,7 @@
 The usage example:
 
 ```
-"""Example shoing the EOW Client usage."""
+"""Example showing the EOW Client usage."""
 
 import asyncio
 
