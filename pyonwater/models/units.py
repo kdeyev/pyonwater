@@ -23,5 +23,5 @@ class NativeUnits(str, Enum):
     """Enum of supported native units."""
 
     GAL = "gal"
-    CCF = "cf"
+    CF = "cf"
     CM = "cm"
