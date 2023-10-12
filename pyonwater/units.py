@@ -7,20 +7,20 @@ def deduce_native_units(read_unit: EOWUnits) -> NativeUnits:
     """Deduce native units based on oew units"""
 
     if read_unit in [EOWUnits.UNIT_CUBIC_METER, EOWUnits.UNIT_CM]:
-        return NativeUnits.cm
+        return NativeUnits.CM
     elif read_unit in [
         EOWUnits.UNIT_GAL,
         EOWUnits.UNIT_10_GAL,
         EOWUnits.UNIT_100_GAL,
         EOWUnits.UNIT_KGAL,
     ]:
-        return NativeUnits.gal
+        return NativeUnits.GAL
     elif read_unit in [
         EOWUnits.UNIT_CCF,
         EOWUnits.UNIT_CF,
         EOWUnits.UNIT_CUBIC_FEET,
     ]:
-        return NativeUnits.cf
+        return NativeUnits.CCF
     else:
         msg = f"Unsupported measurement unit: {read_unit}"
         raise EyeOnWaterUnitError(
@@ -33,13 +33,13 @@ def convert_to_native(  # noqa: C901
 ) -> float:
     """Convert read units to native unit."""
 
-    if native_unit == NativeUnits.cm:
+    if native_unit == NativeUnits.CM:
         if read_unit in [EOWUnits.UNIT_CUBIC_METER, EOWUnits.UNIT_CM]:
             return value
         else:
             msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
             raise EyeOnWaterUnitError(msg)
-    elif native_unit == NativeUnits.gal:
+    elif native_unit == NativeUnits.GAL:
         if read_unit == EOWUnits.UNIT_KGAL:
             return value * 1000
         elif read_unit == EOWUnits.UNIT_100_GAL:
@@ -51,10 +51,10 @@ def convert_to_native(  # noqa: C901
         else:
             msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
             raise EyeOnWaterUnitError(msg)
-    elif native_unit == NativeUnits.cf:
+    elif native_unit == NativeUnits.CCF:
+        if read_unit in [EOWUnits.UNIT_CF, EOWUnits.UNIT_CUBIC_FEET]:
+            return value / 100
         if read_unit == EOWUnits.UNIT_CCF:
-            return value * 100
-        elif read_unit in [EOWUnits.UNIT_CF, EOWUnits.UNIT_CUBIC_FEET]:
             return value
         else:
             msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
