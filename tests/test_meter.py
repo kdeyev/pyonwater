@@ -34,15 +34,15 @@ mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
 @pytest.mark.parametrize(
     "units,expected_native_unit,expected_factor",
     [
-        (EOWUnits.UNIT_GAL, NativeUnits.gal, 1),
-        (EOWUnits.UNIT_100_GAL, NativeUnits.gal, 100),
-        (EOWUnits.UNIT_10_GAL, NativeUnits.gal, 10),
-        (EOWUnits.UNIT_CF, NativeUnits.cf, 1),
-        (EOWUnits.UNIT_CCF, NativeUnits.cf, 100),
-        (EOWUnits.UNIT_KGAL, NativeUnits.gal, 1000),
-        (EOWUnits.UNIT_CUBIC_FEET, NativeUnits.cf, 1),
-        (EOWUnits.UNIT_CM, NativeUnits.cm, 1),
-        (EOWUnits.UNIT_CUBIC_METER, NativeUnits.cm, 1),
+        (EOWUnits.UNIT_GAL, NativeUnits.GAL, 1),
+        (EOWUnits.UNIT_100_GAL, NativeUnits.GAL, 100),
+        (EOWUnits.UNIT_10_GAL, NativeUnits.GAL, 10),
+        (EOWUnits.UNIT_CF, NativeUnits.CCF, 0.01),
+        (EOWUnits.UNIT_CCF, NativeUnits.CCF, 1),
+        (EOWUnits.UNIT_KGAL, NativeUnits.GAL, 1000),
+        (EOWUnits.UNIT_CUBIC_FEET, NativeUnits.CCF, 0.01),
+        (EOWUnits.UNIT_CM, NativeUnits.CM, 1),
+        (EOWUnits.UNIT_CUBIC_METER, NativeUnits.CM, 1),
     ],
 )
 async def test_meter_info(
@@ -82,15 +82,15 @@ async def test_meter_info(
 @pytest.mark.parametrize(
     "units,expected_native_unit,expected_factor",
     [
-        (EOWUnits.UNIT_GAL, NativeUnits.gal, 1),
-        (EOWUnits.UNIT_100_GAL, NativeUnits.gal, 100),
-        (EOWUnits.UNIT_10_GAL, NativeUnits.gal, 10),
-        (EOWUnits.UNIT_CF, NativeUnits.cf, 1),
-        (EOWUnits.UNIT_CCF, NativeUnits.cf, 100),
-        (EOWUnits.UNIT_KGAL, NativeUnits.gal, 1000),
-        (EOWUnits.UNIT_CUBIC_FEET, NativeUnits.cf, 1),
-        (EOWUnits.UNIT_CM, NativeUnits.cm, 1),
-        (EOWUnits.UNIT_CUBIC_METER, NativeUnits.cm, 1),
+        (EOWUnits.UNIT_GAL, NativeUnits.GAL, 1),
+        (EOWUnits.UNIT_100_GAL, NativeUnits.GAL, 100),
+        (EOWUnits.UNIT_10_GAL, NativeUnits.GAL, 10),
+        (EOWUnits.UNIT_CF, NativeUnits.CCF, 0.01),
+        (EOWUnits.UNIT_CCF, NativeUnits.CCF, 1),
+        (EOWUnits.UNIT_KGAL, NativeUnits.GAL, 1000),
+        (EOWUnits.UNIT_CUBIC_FEET, NativeUnits.CCF, 0.01),
+        (EOWUnits.UNIT_CM, NativeUnits.CM, 1),
+        (EOWUnits.UNIT_CUBIC_METER, NativeUnits.CM, 1),
     ],
 )
 async def test_meter_historical_data(

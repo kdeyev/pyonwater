@@ -22,6 +22,6 @@ class EOWUnits(str, Enum):
 class NativeUnits(str, Enum):
     """Enum of supported native units."""
 
-    gal = "gal"
-    cf = "cf"
-    cm = "cm"
+    GAL = "gal"
+    CCF = "cf"
+    CM = "cm"
