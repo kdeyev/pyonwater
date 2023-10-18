@@ -26,7 +26,7 @@ class Meter:
 
     def __init__(self, reader: MeterReader, meter_info: MeterInfo) -> None:
         """Initialize the meter."""
-        self.reader = reader
+        self._reader = reader
         self.last_historical_data: list[DataPoint] = []
 
         self._reading_data: Reading | None = None
@@ -40,12 +40,12 @@ class Meter:
     @property
     def meter_uuid(self) -> str:
         """Return meter UUID."""
-        return self.reader.meter_uuid
+        return self._reader.meter_uuid
 
     @property
     def meter_id(self) -> str:
         """Return meter ID."""
-        return self.reader.meter_id
+        return self._reader.meter_id
 
     @property
     def native_unit_of_measurement(self) -> str:
@@ -54,12 +54,14 @@ class Meter:
 
     async def read_meter_info(self, client: Client) -> None:
         """Read the latest meter info."""
-        self._meter_info = await self.reader.read_meter_info(client)
+        self._meter_info = await self._reader.read_meter_info(client)
         self._reading_data = self._meter_info.reading
 
-    async def read_historical_data(self, client: Client, days_to_load: int) -> None:
+    async def read_historical_data(
+        self, client: Client, days_to_load: int
+    ) -> list[DataPoint]:
         """Read historical data for N last days."""
-        historical_data = await self.reader.read_historical_data(
+        historical_data = await self._reader.read_historical_data(
             client=client, days_to_load=days_to_load
         )
 
@@ -78,6 +80,8 @@ class Meter:
         ].reading and len(historical_data) > len(self.last_historical_data):
             # If it the same date - take more data
             self.last_historical_data = historical_data
+
+        return historical_data
 
     @property
     def meter_info(self) -> MeterInfo:
