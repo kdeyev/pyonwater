@@ -1,14 +1,21 @@
 """Example showing the EOW Client usage."""
 
 import asyncio
+import logging
 
 import aiohttp
 
 from pyonwater import Account, Client
 
+_LOGGER = logging.getLogger(__name__)
+_LOGGER.setLevel(logging.DEBUG)
+_LOGGER.addHandler(logging.StreamHandler())
+
 
 async def main() -> None:
     """Main."""
+
+    _LOGGER.info("Starting example")
     account = Account(
         eow_hostname="eyeonwater.com",
         username="your EOW login",
@@ -20,17 +27,17 @@ async def main() -> None:
     await client.authenticate()
 
     meters = await account.fetch_meters(client=client)
-    print(f"{len(meters)} meters found")
+    _LOGGER.info("Meters found: %i", len(meters))
     for meter in meters:
         # Read meter info
         await meter.read_meter_info(client=client)
-        print(f"meter {meter.meter_uuid} shows {meter.reading}")
-        print(f"meter {meter.meter_uuid} info {meter.meter_info}")
+        _LOGGER.info("Meter info: %s", meter.meter_info)
+        _LOGGER.info("Meter reading: %s", meter.reading)
 
         # Read historical data
         await meter.read_historical_data(client=client, days_to_load=3)
         for d in meter.last_historical_data:
-            print(d)
+            _LOGGER.info("Historical data: %s %s %s", d.dt, d.reading, d.unit)
 
     await websession.close()
 
