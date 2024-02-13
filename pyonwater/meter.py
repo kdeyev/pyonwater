@@ -69,17 +69,14 @@ class Meter:
 
         if not self.last_historical_data:
             self.last_historical_data = historical_data
-        elif (
-            historical_data
-            and historical_data[-1].dt > self.last_historical_data[-1].dt
-        ):
-            # Take newer data
-            self.last_historical_data = historical_data
-        elif historical_data[-1].reading == self.last_historical_data[
-            -1
-        ].reading and len(historical_data) > len(self.last_historical_data):
-            # If it the same date - take more data
-            self.last_historical_data = historical_data
+        elif historical_data and self.last_historical_data:
+            if historical_data[-1].dt > self.last_historical_data[-1].dt:
+                # Take newer data
+                self.last_historical_data = historical_data
+            elif historical_data[-1].reading == self.last_historical_data[-1].reading:
+                # If it's the same date - take more data
+                if len(historical_data) > len(self.last_historical_data):
+                    self.last_historical_data = historical_data
 
         return historical_data
 

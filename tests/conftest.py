@@ -101,6 +101,11 @@ mock_read_meter_endpoint = build_data_endpoint("read_meter_mock_anonymized")
 """Mock for historical data request"""
 mock_historical_data_endpoint = build_data_endpoint("historical_data_mock_anonymized")
 
+"""Mock for historical data with no data request"""
+mock_historical_data_no_data_endpoint = build_data_endpoint(
+    "historical_data_mock_anonymized_nodata"
+)
+
 
 async def build_client(websession) -> tuple[Account, Client]:
     """Build authenticated client."""
