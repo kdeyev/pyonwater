@@ -17,6 +17,7 @@ class EOWUnits(str, Enum):
     UNIT_KGAL = "KGAL"
     UNIT_CM = "CM"
     UNIT_CUBIC_METER = "CUBIC_METER"
+    UNIT_LITER = "LITER"
 
 
 class NativeUnits(str, Enum):

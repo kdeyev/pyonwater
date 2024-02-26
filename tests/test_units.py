@@ -17,6 +17,7 @@ def test_deduce_native_unit():
 
     assert deduce_native_units(EOWUnits.UNIT_CUBIC_METER) == NativeUnits.CM
     assert deduce_native_units(EOWUnits.UNIT_CM) == NativeUnits.CM
+    assert deduce_native_units(EOWUnits.UNIT_LITER) == NativeUnits.CM
 
     assert deduce_native_units(EOWUnits.UNIT_GAL) == NativeUnits.GAL
     assert deduce_native_units(EOWUnits.UNIT_KGAL) == NativeUnits.GAL
@@ -56,6 +57,8 @@ def test_convert_units():
 
     assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_CM, 1.0) == 1.0
     assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_CUBIC_METER, 1.0) == 1.0
+    assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_LITER, 1000.0) == 1.0
+
     with pytest.raises(EyeOnWaterUnitError):
         assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_GAL, 1.0)
 

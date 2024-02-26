@@ -6,7 +6,7 @@ from .models import EOWUnits, NativeUnits
 def deduce_native_units(read_unit: EOWUnits) -> NativeUnits:
     """Deduce native units based on oew units"""
 
-    if read_unit in [EOWUnits.UNIT_CUBIC_METER, EOWUnits.UNIT_CM]:
+    if read_unit in [EOWUnits.UNIT_CUBIC_METER, EOWUnits.UNIT_CM, EOWUnits.UNIT_LITER]:
         return NativeUnits.CM
     elif read_unit in [
         EOWUnits.UNIT_GAL,
@@ -36,6 +36,8 @@ def convert_to_native(  # noqa: C901
     if native_unit == NativeUnits.CM:
         if read_unit in [EOWUnits.UNIT_CUBIC_METER, EOWUnits.UNIT_CM]:
             return value
+        elif read_unit in [EOWUnits.UNIT_LITER]:
+            return value / 1000.0
         else:
             msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
             raise EyeOnWaterUnitError(msg)
