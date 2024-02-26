@@ -44,6 +44,7 @@ mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
         (EOWUnits.UNIT_CM, NativeUnits.CM, 1),
         (EOWUnits.UNIT_CUBIC_METER, NativeUnits.CM, 1),
         (EOWUnits.UNIT_LITER, NativeUnits.CM, 0.001),
+        (EOWUnits.UNIT_LITER_LC, NativeUnits.CM, 0.001),
     ],
 )
 async def test_meter_info(
