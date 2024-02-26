@@ -18,6 +18,7 @@ class EOWUnits(str, Enum):
     UNIT_CM = "CM"
     UNIT_CUBIC_METER = "CUBIC_METER"
     UNIT_LITER = "LITER"
+    UNIT_LITERS = "Liters"
     UNIT_LITER_LC = "Liter"
 
 
