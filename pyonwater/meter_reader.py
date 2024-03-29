@@ -128,6 +128,9 @@ class MeterReader:
         ts = data.timeseries[key].series
         statistics = []
         for d in ts:
+            if d.bill_read is None or d.display_unit is None:
+                continue
+
             statistics.append(
                 DataPoint(
                     dt=timezone.localize(d.date),

@@ -84,7 +84,18 @@
      "estimated": 1,
      "raw_read": 11111111,
      "unit": "GAL"
-    }
+    },
+    {
+      "end_date": "1990-01-27T00:00:00",
+      "meter_uuid": 1111111111111111111,
+      "value": 42.0,
+      "start_date": "1990-01-27T00:00:00",
+      "date": "1990-01-27 00:00:00",
+      "register_number": 1,
+      "estimated": 1,
+      "raw_read": 11111111,
+      "unit": "GAL"
+     }
 
     ],
     "legend": {
