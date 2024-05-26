@@ -114,7 +114,7 @@ class Client:
     def extract_json(self, line: str, prefix: str) -> list[dict[str, Any]]:
         """Extract JSON response."""
         line = line[line.find(prefix) + len(prefix) :]
-        line = line[: line.find(";")]
+        line = line[: line.rfind(";")]
         return json.loads(line)  # type: ignore
 
     @property
