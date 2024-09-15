@@ -1,6 +1,7 @@
 """EyeOnWater API integration."""
 from __future__ import annotations
 
+import asyncio
 import datetime
 import json
 import logging
@@ -84,6 +85,30 @@ class MeterReader:
 
         return statistics
 
+    def convert(self, data: HistoricalData, key: str) -> list[DataPoint]:
+        """Convert the raw data into a list of DataPoint objects."""
+
+        timezones = data.hit.meter_timezone
+        timezone = pytz.timezone(timezones[0])
+
+        ts = data.timeseries[key].series
+        statistics = []
+        for d in ts:
+            if d.bill_read is None or d.display_unit is None:
+                continue
+
+            statistics.append(
+                DataPoint(
+                    dt=timezone.localize(d.date),
+                    reading=d.bill_read,
+                    unit=d.display_unit,
+                ),
+            )
+
+        statistics.sort(key=lambda d: d.dt)
+
+        return statistics
+
     async def read_historical_data_one_day(
         self,
         client: Client,
@@ -122,23 +147,5 @@ class MeterReader:
             msg = f"Meter {key} not found"
             raise EyeOnWaterResponseIsEmpty(msg)
 
-        timezones = data.hit.meter_timezone
-        timezone = pytz.timezone(timezones[0])
-
-        ts = data.timeseries[key].series
-        statistics = []
-        for d in ts:
-            if d.bill_read is None or d.display_unit is None:
-                continue
-
-            statistics.append(
-                DataPoint(
-                    dt=timezone.localize(d.date),
-                    reading=d.bill_read,
-                    unit=d.display_unit,
-                ),
-            )
-
-        statistics.sort(key=lambda d: d.dt)
-
-        return statistics
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.convert, data, key)
