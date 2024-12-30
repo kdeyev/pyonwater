@@ -44,7 +44,7 @@ class MeterReader:
             raise Exception(msg)
 
         try:
-            meter_info = MeterInfo.parse_obj(meters[0]["_source"])
+            meter_info = MeterInfo.model_validate(meters[0]["_source"])
         except ValidationError as e:
             msg = f"Unexpected EOW response {e} with payload {meters[0]['_source']}"
             raise EyeOnWaterAPIError(msg) from e
