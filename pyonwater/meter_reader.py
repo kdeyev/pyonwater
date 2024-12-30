@@ -112,7 +112,7 @@ class MeterReader:
             json=query,
         )
         try:
-            data = HistoricalData.parse_raw(raw_data)
+            data = HistoricalData.model_validate_json(raw_data)
         except ValidationError as e:
             msg = f"Unexpected EOW response {e}"
             raise EyeOnWaterAPIError(msg) from e
