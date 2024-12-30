@@ -72,8 +72,8 @@ class Params(BaseModel):
 class Series(BaseModel):
     # Mandatory fields
     date: datetime
-    display_unit: Optional[EOWUnits]
-    bill_read: Optional[float]
+    display_unit: Optional[EOWUnits] = None
+    bill_read: Optional[float] = None
 
     # Optional fields
     end_date: Optional[datetime] = None
