@@ -200,7 +200,7 @@
        "pi_status": "",
        "second_carrier": false,
        "latest_read": {
-        "bill_read": "111.1111",
+        "bill_read": 111.1111,
         "bill_display_units": "KGAL",
         "full_read": 42.0,
         "read_time": "1990-01-27T00:00:00",
