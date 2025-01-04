@@ -335,9 +335,9 @@ class EndpointTemperature(BaseModel):
     # Optional fields
     latest_average: Optional[float] = None
     last_reported: Optional[str] = None
-    seven_day_min: Optional[str] = None
-    seven_day_average: Optional[str] = None
-    seven_day_max: Optional[str] = None
+    seven_day_min: Optional[float] = None
+    seven_day_average: Optional[float] = None
+    seven_day_max: Optional[float] = None
     sensor_uuid: Optional[str] = None
     conditions: Optional[Conditions] = None
 

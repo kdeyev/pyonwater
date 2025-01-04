@@ -320,9 +320,9 @@
        "endpoint_temperature": {
         "latest_average": 11,
         "last_reported": "1990-01-27T00:00:00",
-        "seven_day_min": "11.1",
-        "seven_day_average": "11.1",
-        "seven_day_max": "11.1",
+        "seven_day_min": 11.1,
+        "seven_day_average": 11.1,
+        "seven_day_max": 11.1,
         "sensor_uuid": "1111111111111111111",
         "conditions": {
          "increasing": false,
