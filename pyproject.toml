@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyonwater"
-version = "0.3.13"
+version = "0.3.14"
 description = "EyeOnWater client library."
 authors = []
 license = "MIT"
