@@ -206,7 +206,7 @@ class LatestRead(BaseModel):
     units: EOWUnits
 
     # Optional fields
-    bill_read: Optional[str] = None
+    bill_read: Optional[float] = None
     bill_display_units: Optional[EOWUnits] = None
     read_time: datetime
     has_endpoints: Optional[bool] = None
