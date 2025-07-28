@@ -23,6 +23,7 @@ def deduce_native_units(read_unit: EOWUnits) -> NativeUnits:
         return NativeUnits.GAL
     elif read_unit in [
         EOWUnits.UNIT_CCF,
+        EOWUnits.UNIT_10_CF,
         EOWUnits.UNIT_CF,
         EOWUnits.UNIT_CUBIC_FEET,
     ]:
@@ -68,6 +69,8 @@ def convert_to_native(  # noqa: C901
             return value
         elif read_unit == EOWUnits.UNIT_CCF:
             return value * 100
+        elif read_unit == EOWUnits.UNIT_10_CF:
+            return value * 10
         else:
             msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
             raise EyeOnWaterUnitError(msg)
