@@ -5,6 +5,10 @@ description = "EyeOnWater client library."
 authors = []
 license = "MIT"
 readme = "README.md"
+packages = [
+    { include = "pyonwater" }
+]
+include = ["pyonwater/py.typed"]
 
 [build-system]
 requires = ["poetry-core"]
