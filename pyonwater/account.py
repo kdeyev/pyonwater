@@ -1,4 +1,5 @@
 """EyeOnWater API integration."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -36,7 +37,7 @@ class Account:
         path = DASHBOARD_ENDPOINT + urllib.parse.quote(self.username)
         data = await client.request(path=path, method="get")
 
-        meters = []
+        meters: list[MeterReader] = []
         lines = data.split("\n")
         for line in lines:
             if INFO_PREFIX in line:

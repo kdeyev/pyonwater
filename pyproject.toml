@@ -1,22 +1,26 @@
 [tool.poetry]
 name = "pyonwater"
-version = "0.3.15"
+version = "0.3.16"
 description = "EyeOnWater client library."
 authors = []
 license = "MIT"
 readme = "README.md"
+packages = [
+    { include = "pyonwater" }
+]
+include = ["pyonwater/py.typed"]
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.15"
 aiohttp = "^3.8.5"
 tenacity = "^8.2.3"
 pytz = "^2023.3"
 python-dateutil = "^2.8.2"
-pydantic = ">=1.10.17"
+pydantic = ">=1.10.17,<2"
 
 [tool.poetry.group.dev.dependencies]
 types-pytz = "^2023.3.0.1"
@@ -61,6 +65,9 @@ ignore = [
 [tool.ruff.per-file-ignores]
 "tests/*.py" = ["D1"]
 
+[tool.flake8]
+max-line-length = 88
+
 [tool.mypy]
 plugins = ["pydantic.mypy"]
 strict = true
@@ -81,3 +88,6 @@ testpaths = [
     "tests"
 ]
 asyncio_mode = "auto"
+
+[tool.pylint.MASTER]
+extension-pkg-whitelist = ["pydantic"]

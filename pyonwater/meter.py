@@ -1,4 +1,5 @@
 """EyeOnWater API integration."""
+
 from __future__ import annotations
 
 import logging
@@ -6,14 +7,14 @@ from typing import TYPE_CHECKING
 
 from .exceptions import EyeOnWaterException
 from .models import DataPoint
+from .models.eow_historical_models import AtAGlanceData
+from .models.units import AggregationLevel, RequestUnits
 from .units import EOWUnits, convert_to_native, deduce_native_units
 
 if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
     from .meter_reader import MeterReader
     from .models import MeterInfo, Reading
-
-    pass
 
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
 CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
@@ -58,11 +59,26 @@ class Meter:
         self._reading_data = self._meter_info.reading
 
     async def read_historical_data(
-        self, client: Client, days_to_load: int
+        self,
+        client: Client,
+        days_to_load: int,
+        aggregation: AggregationLevel = AggregationLevel.HOURLY,
+        units: RequestUnits | None = None,
     ) -> list[DataPoint]:
-        """Read historical data for N last days."""
+        """Read historical data for N last days.
+
+        Args:
+            client: The authenticated API client.
+            days_to_load: Number of days of history to retrieve.
+            aggregation: Granularity level (default: HOURLY).
+                         Use QUARTER_HOURLY for 15-minute resolution.
+            units: Preferred units for response (optional).
+        """
         historical_data = await self._reader.read_historical_data(
-            client=client, days_to_load=days_to_load
+            client=client,
+            days_to_load=days_to_load,
+            aggregation=aggregation,
+            units=units,
         )
 
         historical_data = [self._convert_to_native(dp) for dp in historical_data]
@@ -109,3 +125,18 @@ class Meter:
         return DataPoint(
             dt=dp.dt, reading=native_reading, unit=self._native_unit_of_measurement
         )
+
+    async def read_at_a_glance(
+        self,
+        client: Client,
+        units: RequestUnits | None = None,
+    ) -> AtAGlanceData:
+        """Retrieve quick summary statistics.
+
+        Returns this_week, last_week, and average daily usage.
+
+        Args:
+            client: The authenticated API client.
+            units: Preferred units for response (optional).
+        """
+        return await self._reader.read_at_a_glance(client=client, units=units)
