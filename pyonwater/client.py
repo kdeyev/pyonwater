@@ -1,4 +1,5 @@
 """EyeOnWater API integration."""
+
 from __future__ import annotations
 
 import datetime
@@ -8,17 +9,17 @@ from typing import TYPE_CHECKING, Any
 
 from tenacity import retry, retry_if_exception_type
 
-if TYPE_CHECKING:  # pragma: no cover
-    from aiohttp import ClientSession
-
-    from .account import Account
-
 from .exceptions import (
     EyeOnWaterAuthError,
     EyeOnWaterAuthExpired,
     EyeOnWaterException,
     EyeOnWaterRateLimitError,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    from aiohttp import ClientSession
+
+    from .account import Account
 
 TOKEN_EXPIRATION = datetime.timedelta(minutes=15)
 AUTH_ENDPOINT = "account/signin"
@@ -76,7 +77,7 @@ class Client:
         data: str = await resp.text()
 
         if resp.status != 200:
-            _LOGGER.error(f"Request failed: {resp.status} {data}")
+            _LOGGER.error("Request failed: %s %s", resp.status, data)
             msg = f"Request failed: {resp.status} {data}"
             raise EyeOnWaterException(msg)
 
