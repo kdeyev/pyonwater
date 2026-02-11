@@ -15,7 +15,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.15"
+python = ">=3.12,<3.15"
 aiohttp = "^3.8.5"
 tenacity = "^8.2.3"
 pytz = "^2023.3"
@@ -23,15 +23,15 @@ python-dateutil = "^2.8.2"
 pydantic = "^2.0"
 
 [tool.poetry.group.dev.dependencies]
-types-pytz = "^2023.3.0.1"
-pytest = "^7.4.1"
-pytest-asyncio = "^0.21.1"
-pytest-aiohttp = "^1.0.4"
-pytest-cov = "^4.1.0"
+types-pytz = "^2025.2.0.20251108"
+pytest = "^9.0.2"
+pytest-asyncio = "^1.3.0"
+pytest-aiohttp = "^1.1.0"
+pytest-cov = "^7.0.0"
 coverall = "^1.0.5"
 
 [tool.black]
-target-version = ["py39", "py310"]
+target-version = ["py312", "py313"]
 exclude = 'generated'
 
 [tool.isort]
