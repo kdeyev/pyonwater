@@ -6,7 +6,7 @@ for building mock responses with various aggregation levels and units.
 """
 
 import json
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 from aiohttp import web
@@ -54,7 +54,7 @@ async def mock_signin_endpoint(_request: web.Request) -> web.Response:
     return web.Response(text="Hello, world", headers={"cookies": "key=val"})
 
 
-def mock_get_meters_endpoint(_request: web.Request) -> web.Response:
+async def mock_get_meters_endpoint(_request: web.Request) -> web.Response:
     """Fetch meters endpoint mock."""
     data = (
         '  AQ.Views.MeterPicker.meters = [{"display_address": "", '
@@ -66,10 +66,12 @@ def mock_get_meters_endpoint(_request: web.Request) -> web.Response:
     return web.Response(text=data)
 
 
-def build_data_endpoint(filename: str) -> Callable[[web.Request], web.Response]:
+def build_data_endpoint(
+    filename: str,
+) -> Callable[[web.Request], Awaitable[web.Response]]:
     """Build an endpoint with data coming from mock data file."""
 
-    def read_data(_request: web.Request) -> web.Response:
+    async def read_data(_request: web.Request) -> web.Response:
         with open(f"tests/mock_data/{filename}.json", encoding="utf-8") as f:
             return web.Response(text=f.read())
 
@@ -78,10 +80,10 @@ def build_data_endpoint(filename: str) -> Callable[[web.Request], web.Response]:
 
 def build_data_with_units_endpoint(
     filename: str, units: str
-) -> Callable[[web.Request], web.Response]:
+) -> Callable[[web.Request], Awaitable[web.Response]]:
     """Build an endpoint with data from mock file with specific unit."""
 
-    def read_data(_request: web.Request) -> web.Response:
+    async def read_data(_request: web.Request) -> web.Response:
         with open(f"tests/mock_data/{filename}.json", encoding="utf-8") as f:
             data = json.load(f)
             data = replace_units(data, units)
@@ -91,12 +93,12 @@ def build_data_with_units_endpoint(
 
 
 def change_units_decorator(
-    endpoint: Callable[[web.Request], web.Response], new_unit: str
-) -> Callable[[web.Request], web.Response]:
+    endpoint: Callable[[web.Request], Awaitable[web.Response]], new_unit: str
+) -> Callable[[web.Request], Awaitable[web.Response]]:
     """Decorator for replacing EOW units in another endpoint response."""
 
-    def change_units_endpoint(_request: web.Request) -> web.Response:
-        resp = endpoint(_request)
+    async def change_units_endpoint(_request: web.Request) -> web.Response:
+        resp = await endpoint(_request)
         if resp.text is not None:
             data = json.loads(resp.text)
             data = replace_units(data, new_unit)
@@ -107,35 +109,35 @@ def change_units_decorator(
 
 
 def add_error_decorator(
-    endpoint: Callable[[web.Request], web.Response], code: int
-) -> Callable[[web.Request], web.Response]:
+    endpoint: Callable[[web.Request], Awaitable[web.Response]], code: int
+) -> Callable[[web.Request], Awaitable[web.Response]]:
     """Decorator for adding one error to another endpoint.
 
     The second call will be successful.
     """
     counter = 0
 
-    def mock(_request: web.Request) -> web.Response:
+    async def mock(_request: web.Request) -> web.Response:
         nonlocal counter
         if counter == 0:
             counter += 1
             return web.Response(status=code)
-        return endpoint(_request)
+        return await endpoint(_request)
 
     return mock
 
 
-mock_read_meter_endpoint: Callable[[web.Request], web.Response] = build_data_endpoint(
-    "read_meter_mock_anonymized"
+mock_read_meter_endpoint: Callable[[web.Request], Awaitable[web.Response]] = (
+    build_data_endpoint("read_meter_mock_anonymized")
 )
 
-mock_historical_data_endpoint: Callable[[web.Request], web.Response] = (
+mock_historical_data_endpoint: Callable[[web.Request], Awaitable[web.Response]] = (
     build_data_endpoint("historical_data_mock_anonymized")
 )
 
-mock_historical_data_no_data_endpoint: Callable[[web.Request], web.Response] = (
-    build_data_endpoint("historical_data_mock_anonymized_nodata")
-)
+mock_historical_data_no_data_endpoint: Callable[
+    [web.Request], Awaitable[web.Response]
+] = build_data_endpoint("historical_data_mock_anonymized_nodata")
 
 
 async def build_client(websession: Any) -> tuple[Account, Client]:
@@ -174,7 +176,7 @@ async def build_meter(client: Client) -> Meter:
 
 def build_consumption_endpoint_with_aggregation(
     _aggregation: str,
-) -> Callable[[web.Request], web.Response]:
+) -> Callable[[web.Request], Awaitable[web.Response]]:
     """Build a consumption endpoint for a specific aggregation level.
 
     Args:
@@ -187,7 +189,7 @@ def build_consumption_endpoint_with_aggregation(
     return build_data_endpoint("historical_data_mock_anonymized")
 
 
-def build_at_a_glance_endpoint() -> Callable[[web.Request], web.Response]:
+def build_at_a_glance_endpoint() -> Callable[[web.Request], Awaitable[web.Response]]:
     """Build an at_a_glance endpoint mock.
 
     Returns:

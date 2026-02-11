@@ -43,37 +43,43 @@ def convert_to_native(  # noqa: C901
     if native_unit == NativeUnits.CM:
         if read_unit in [EOWUnits.UNIT_CUBIC_METER, EOWUnits.UNIT_CM]:
             return value
-        elif read_unit in [
+        if read_unit in [
             EOWUnits.UNIT_LITER,
             EOWUnits.UNIT_LITERS,
             EOWUnits.UNIT_LITER_LC,
         ]:
             return value / 1000.0
-        else:
-            msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
-            raise EyeOnWaterUnitError(msg)
+        msg = (
+            f"Unsupported measurement unit: {read_unit} "
+            f"for native unit: {native_unit}"
+        )
+        raise EyeOnWaterUnitError(msg)
     elif native_unit == NativeUnits.GAL:
         if read_unit == EOWUnits.UNIT_KGAL:
             return value * 1000
-        elif read_unit == EOWUnits.UNIT_100_GAL:
+        if read_unit == EOWUnits.UNIT_100_GAL:
             return value * 100
-        elif read_unit == EOWUnits.UNIT_10_GAL:
+        if read_unit == EOWUnits.UNIT_10_GAL:
             return value * 10
-        elif read_unit == EOWUnits.UNIT_GAL:
+        if read_unit == EOWUnits.UNIT_GAL:
             return value
-        else:
-            msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
-            raise EyeOnWaterUnitError(msg)
+        msg = (
+            f"Unsupported measurement unit: {read_unit} "
+            f"for native unit: {native_unit}"
+        )
+        raise EyeOnWaterUnitError(msg)
     elif native_unit == NativeUnits.CF:
         if read_unit in [EOWUnits.UNIT_CF, EOWUnits.UNIT_CUBIC_FEET]:
             return value
-        elif read_unit == EOWUnits.UNIT_CCF:
+        if read_unit == EOWUnits.UNIT_CCF:
             return value * 100
-        elif read_unit == EOWUnits.UNIT_10_CF:
+        if read_unit == EOWUnits.UNIT_10_CF:
             return value * 10
-        else:
-            msg = f"Unsupported measurement unit: {read_unit} for native unit: {native_unit}"
-            raise EyeOnWaterUnitError(msg)
+        msg = (
+            f"Unsupported measurement unit: {read_unit} "
+            f"for native unit: {native_unit}"
+        )
+        raise EyeOnWaterUnitError(msg)
     else:
         msg = f"Unsupported native unit: {native_unit}"
         raise EyeOnWaterUnitError(
