@@ -107,6 +107,27 @@ mock_historical_data_no_data_endpoint = build_data_endpoint(
 )
 
 
+
+async def mock_validating_historical_data_endpoint(request: web.Request) -> web.Response:
+    """Mock consumption endpoint that validates required parameters like real API.
+
+    The real EyeOnWater API returns empty responses when required parameters
+    are missing. This mock mimics that behavior to catch contract violations.
+    """
+    payload = await request.json()
+    params = payload.get("params", {})
+
+    # Validate required parameters - real API returns empty response if missing
+    required_params = ["source", "aggregate", "perspective", "date", "units"]
+    for param in required_params:
+        if param not in params:
+            # Return empty string like real API does when params are invalid
+            return web.Response(text="")
+
+    # Valid request - return mock data
+    with open("tests/mock_data/historical_data_mock_anonymized.json", encoding="utf-8") as f:
+        return web.Response(text=f.read())
+
 async def build_client(websession) -> tuple[Account, Client]:
     """Build authenticated client."""
     account = Account(
