@@ -52,9 +52,24 @@ class MeterReader:
     """Class represents meter reader."""
 
     def __init__(self, meter_uuid: str, meter_id: str) -> None:
-        """Initialize the meter."""
-        self.meter_uuid = meter_uuid
-        self.meter_id: str = meter_id
+        """Initialize the meter.
+        
+        Args:
+            meter_uuid: The unique identifier for the meter (cannot be empty).
+            meter_id: The meter ID (cannot be empty).
+            
+        Raises:
+            ValueError: If meter_uuid or meter_id is empty/None.
+        """
+        if not meter_uuid or not meter_uuid.strip():
+            msg = "meter_uuid cannot be empty"
+            raise ValueError(msg)
+        if not meter_id or not meter_id.strip():
+            msg = "meter_id cannot be empty"
+            raise ValueError(msg)
+            
+        self.meter_uuid = meter_uuid.strip()
+        self.meter_id: str = meter_id.strip()
 
     async def read_meter_info(self, client: Client) -> MeterInfo:
         """Triggers an on-demand meter read and returns it when complete."""
@@ -87,11 +102,18 @@ class MeterReader:
 
         Args:
             client: The authenticated API client.
-            days_to_load: Number of days of history to retrieve.
+            days_to_load: Number of days of history to retrieve (must be positive).
             aggregation: Granularity level for data (default: HOURLY).
                          Use QUARTER_HOURLY for 15-minute resolution.
             units: Preferred units for response data (optional).
+            
+        Raises:
+            ValueError: If days_to_load is not positive.
         """
+        if days_to_load < 1:
+            msg = f"days_to_load must be at least 1, got {days_to_load}"
+            raise ValueError(msg)
+            
         today = datetime.datetime.now().replace(
             hour=0,
             minute=0,
@@ -241,17 +263,21 @@ class MeterReader:
 
         Args:
             client: The authenticated API client.
-            units: Preferred units for response (optional).
+            units: Preferred units for response (optional, defaults to cm).
 
         Returns:
             AtAGlanceData with this_week, last_week, and average values.
+            
+        Note:
+            The at_a_glance API may have similar parameter requirements as
+            consumption API. We provide a default unit value to avoid empty
+            responses, though it appears more lenient than consumption endpoint.
         """
         params: dict[str, str] = {
             "source": "barnacle",
             "perspective": "billing",
+            "units": units.value if units is not None else "cm",  # Default to cm for consistency
         }
-        if units is not None:
-            params["units"] = units.value
 
         query: dict[str, Any] = {
             "params": params,
