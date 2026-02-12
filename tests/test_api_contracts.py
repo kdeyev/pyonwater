@@ -8,6 +8,8 @@ from typing import Any
 
 from aiohttp import web
 
+import pytest
+
 from conftest import (
     build_client,
     mock_validating_historical_data_endpoint,
@@ -17,6 +19,7 @@ from conftest import (
 from pyonwater import MeterReader
 
 
+@pytest.mark.asyncio()
 async def test_new_search_request_payload(aiohttp_client: Any) -> None:
     """Validate new_search request shape."""
     app = web.Application()
@@ -40,6 +43,7 @@ async def test_new_search_request_payload(aiohttp_client: Any) -> None:
     await meter_reader.read_meter_info(client=client)
 
 
+@pytest.mark.asyncio()
 async def test_consumption_request_payload(aiohttp_client: Any) -> None:
     """Validate consumption request params and query string."""
     app = web.Application()
@@ -49,15 +53,17 @@ async def test_consumption_request_payload(aiohttp_client: Any) -> None:
         assert request.rel_url.query.get("eow") == "True"  # nosec: B101
         payload = await request.json()
         params = payload["params"]
-        
+
         # Validate all required parameters are present
         assert params["aggregate"] == "hourly"  # nosec: B101
         assert params["perspective"] == "billing"  # nosec: B101
         assert params["date"] == "01/02/2024"  # nosec: B101
-        assert "units" in params  # nosec: B101  # Critical: API returns empty without this
+        assert (
+            "units" in params
+        )  # nosec: B101  # Critical: API returns empty without this
         assert params["source"] == "barnacle"  # nosec: B101
         assert params["combine"] == "true"  # nosec: B101
-        
+
         terms = payload["query"]["query"]["terms"]
         assert terms["meter.meter_uuid"] == ["meter_uuid"]  # nosec: B101
 
@@ -74,9 +80,10 @@ async def test_consumption_request_payload(aiohttp_client: Any) -> None:
     await meter_reader.read_historical_data_one_day(client=client, date=test_date)
 
 
+@pytest.mark.asyncio()
 async def test_consumption_validates_required_params(aiohttp_client: Any) -> None:
     """Verify that validating mock endpoint mimics real API behavior.
-    
+
     The improved mock_historical_data_endpoint validates required parameters
     and returns empty responses when they're missing, just like the real API.
     This test ensures our code always sends required params.
@@ -95,7 +102,7 @@ async def test_consumption_validates_required_params(aiohttp_client: Any) -> Non
     _, client = await build_client(websession)
 
     meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
-    
+
     # Should succeed because our code now always includes units parameter
     data = await meter_reader.read_historical_data(client=client, days_to_load=1)
     assert len(data) > 0  # nosec: B101

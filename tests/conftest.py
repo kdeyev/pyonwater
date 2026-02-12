@@ -125,7 +125,9 @@ async def mock_validating_historical_data_endpoint(request: web.Request) -> web.
             return web.Response(text="")
 
     # Valid request - return mock data
-    with open("tests/mock_data/historical_data_mock_anonymized.json", encoding="utf-8") as f:
+    with open(
+        "tests/mock_data/historical_data_mock_anonymized.json", encoding="utf-8"
+    ) as f:
         return web.Response(text=f.read())
 
 async def build_client(websession) -> tuple[Account, Client]:

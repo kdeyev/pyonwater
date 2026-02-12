@@ -53,11 +53,11 @@ class MeterReader:
 
     def __init__(self, meter_uuid: str, meter_id: str) -> None:
         """Initialize the meter.
-        
+
         Args:
             meter_uuid: The unique identifier for the meter (cannot be empty).
             meter_id: The meter ID (cannot be empty).
-            
+
         Raises:
             ValueError: If meter_uuid or meter_id is empty/None.
         """
@@ -67,7 +67,7 @@ class MeterReader:
         if not meter_id or not meter_id.strip():
             msg = "meter_id cannot be empty"
             raise ValueError(msg)
-            
+
         self.meter_uuid = meter_uuid.strip()
         self.meter_id: str = meter_id.strip()
 
@@ -106,14 +106,14 @@ class MeterReader:
             aggregation: Granularity level for data (default: HOURLY).
                          Use QUARTER_HOURLY for 15-minute resolution.
             units: Preferred units for response data (optional).
-            
+
         Raises:
             ValueError: If days_to_load is not positive.
         """
         if days_to_load < 1:
             msg = f"days_to_load must be at least 1, got {days_to_load}"
             raise ValueError(msg)
-            
+
         today = datetime.datetime.now().replace(
             hour=0,
             minute=0,
@@ -163,9 +163,9 @@ class MeterReader:
 
         ts = data.timeseries[key].series
         statistics: list[DataPoint] = []
-        
-        _LOGGER.info(f"Converting {len(ts)} total data points from API response")
-        
+
+        _LOGGER.info("Converting %d total data points from API response", len(ts))
+
         skipped_count = 0
         for d in ts:
             if d.bill_read is None or d.display_unit is None:
@@ -180,7 +180,12 @@ class MeterReader:
                 ),
             )
 
-        _LOGGER.info(f"After filtering: {len(statistics)} valid points (skipped {skipped_count} points due to missing bill_read or display_unit)")
+        _LOGGER.info(
+            "After filtering: %d valid points "
+            "(skipped %d points due to missing bill_read or display_unit)",
+            len(statistics),
+            skipped_count,
+        )
         statistics.sort(key=lambda d: d.dt)
 
         return statistics
@@ -212,7 +217,9 @@ class MeterReader:
             "date": date.strftime("%m/%d/%Y"),
             "furthest_zoom": "hr",
             "display_weeks": True,
-            "units": units.value if units is not None else "cm",  # Default to cm (cubic meters) if not specified
+            "units": (
+                units.value if units is not None else "cm"
+            ),  # Default to cm (cubic meters) if not specified
         }
 
         query: dict[str, object] = {
@@ -224,17 +231,24 @@ class MeterReader:
             method="post",
             json=query,
         )
-        
-        _LOGGER.info(f"API Response for {date.strftime('%Y-%m-%d')}: {len(raw_data) if raw_data else 0} bytes")
-        _LOGGER.debug(f"Raw response (first 1000 chars): {raw_data[:1000] if raw_data else 'None'}")
-        
+
+        _LOGGER.info(
+            "API Response for %s: %d bytes",
+            date.strftime("%Y-%m-%d"),
+            len(raw_data) if raw_data else 0,
+        )
+        _LOGGER.debug(
+            "Raw response (first 1000 chars): %s",
+            raw_data[:1000] if raw_data else "None",
+        )
+
         # Handle empty responses from API
         if not raw_data or not raw_data.strip():
             msg = "Empty response from Eye on Water API"
             raise EyeOnWaterResponseIsEmpty(msg)
-        
-        _LOGGER.info(f"Received {len(raw_data)} bytes from API for date {date}")
-        
+
+        _LOGGER.info("Received %d bytes from API for date %s", len(raw_data), date)
+
         try:
             data = HistoricalData.model_validate_json(raw_data)
         except ValidationError as e:
@@ -243,11 +257,16 @@ class MeterReader:
 
         key = f"{self.meter_uuid},0"
         if key not in data.timeseries:
-            msg = f"Meter {key} not found in timeseries keys: {list(data.timeseries.keys())}"
+            available_keys = list(data.timeseries.keys())
+            msg = f"Meter {key} not found in timeseries keys: {available_keys}"
             _LOGGER.error(msg)
             raise EyeOnWaterResponseIsEmpty(msg)
-        
-        _LOGGER.debug(f"Found timeseries for {key}, series has {len(data.timeseries[key].series)} points")
+
+        _LOGGER.debug(
+            "Found timeseries for %s, series has %d points",
+            key,
+            len(data.timeseries[key].series),
+        )
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.convert, data, key)
@@ -267,7 +286,7 @@ class MeterReader:
 
         Returns:
             AtAGlanceData with this_week, last_week, and average values.
-            
+
         Note:
             The at_a_glance API may have similar parameter requirements as
             consumption API. We provide a default unit value to avoid empty
@@ -276,7 +295,9 @@ class MeterReader:
         params: dict[str, str] = {
             "source": "barnacle",
             "perspective": "billing",
-            "units": units.value if units is not None else "cm",  # Default to cm for consistency
+            "units": (
+                units.value if units is not None else "cm"
+            ),  # Default to cm for consistency
         }
 
         query: dict[str, Any] = {

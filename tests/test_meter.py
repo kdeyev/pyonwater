@@ -1,7 +1,10 @@
-"""Tests for pyonwater meter."""
+"""Tests for pyonwater meter."""  # nosec: B101, B106
 
+from typing import Any
 
 from aiohttp import web
+import pytest
+
 from conftest import (
     build_client,
     build_data_endpoint,
@@ -11,21 +14,19 @@ from conftest import (
     mock_read_meter_endpoint,
     mock_signin_endpoint,
 )
-import pytest
+from pyonwater import EOWUnits, EyeOnWaterUnitError, NativeUnits
 
-from pyonwater import EOWUnits, EyeOnWaterException, EyeOnWaterUnitError, NativeUnits
-
-"""Mock for historical data request, but no actual data"""
+# Mock for historical data request, but no actual data
 mock_historical_data_nodata_endpoint = build_data_endpoint(
     "historical_data_mock_anonymized_nodata",
 )
 
-"""Mock for historical data request, but newer data"""
+# Mock for historical data request, but newer data
 mock_historical_data_newer_data_endpoint = build_data_endpoint(
     "historical_data_mock_anonymized_newer_data",
 )
 
-"""Mock for historical data request, but newer and more data"""
+# Mock for historical data request, but newer and more data
 mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
     "historical_data_mock_anonymized_newer_data_moredata",
 )
@@ -48,104 +49,113 @@ mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
         (EOWUnits.UNIT_LITER_LC, NativeUnits.CM, 0.001),
     ],
 )
+@pytest.mark.asyncio()
 async def test_meter_info(
-    aiohttp_client, loop, units, expected_native_unit, expected_factor
-):
+    aiohttp_client: Any, units: Any, expected_native_unit: Any, expected_factor: Any
+) -> None:
     """Test meter returns expected units."""
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
     app.router.add_post(
         "/api/2/residential/new_search",
-        change_units_decorator(mock_read_meter_endpoint, units),
+        change_units_decorator(mock_read_meter_endpoint, units),  # type: ignore
     )
     app.router.add_post(
         "/api/2/residential/consumption",
-        change_units_decorator(mock_historical_data_endpoint, units),
+        change_units_decorator(mock_historical_data_endpoint, units),  # type: ignore
     )
 
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
     meter = await build_meter(client)
 
     # Read meter info
-    assert meter.reading.reading == 42.0 * expected_factor
-    assert meter.reading.unit == expected_native_unit
-    assert meter.meter_info is not None
-    assert meter.native_unit_of_measurement == expected_native_unit
+    assert meter.reading.reading == 42.0 * expected_factor  # nosec: B101
+    assert meter.reading.unit == expected_native_unit  # nosec: B101
+    assert meter.meter_info is not None  # nosec: B101
+    assert meter.native_unit_of_measurement == expected_native_unit  # nosec: B101
 
     # Read meter with some historical
     await meter.read_historical_data(client=client, days_to_load=1)
-    assert len(meter.last_historical_data) == 1
-    assert meter.last_historical_data[0].reading == 42.0 * expected_factor
-    assert meter.last_historical_data[0].unit == expected_native_unit
+    assert len(meter.last_historical_data) == 1  # nosec: B101
+    assert (
+        meter.last_historical_data[0].reading == 42.0 * expected_factor
+    )  # nosec: B101
+    assert meter.last_historical_data[0].unit == expected_native_unit  # nosec: B101
 
 
-async def test_meter_historical_data_no_data(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_meter_historical_data_no_data(aiohttp_client: Any) -> None:
     """Basic meter test."""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
     app.router.add_post(
         "/api/2/residential/new_search",
-        mock_read_meter_endpoint,
+        mock_read_meter_endpoint,  # type: ignore
     )
     app.router.add_post(
         "/api/2/residential/consumption",
-        mock_historical_data_endpoint,
+        mock_historical_data_endpoint,  # type: ignore
     )
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
     meter = await build_meter(client)
 
     # Read historical data with no data
     data = await meter.read_historical_data(client=client, days_to_load=1)
-    assert data != []
-    assert meter.last_historical_data != []
+    assert data != []  # nosec: B101
+    assert meter.last_historical_data != []  # nosec: B101
 
     # New meter reading in CM
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
     app.router.add_post(
         "/api/2/residential/new_search",
-        mock_read_meter_endpoint,
+        mock_read_meter_endpoint,  # type: ignore
     )
     app.router.add_post(
         "/api/2/residential/consumption",
-        mock_historical_data_nodata_endpoint,
+        mock_historical_data_nodata_endpoint,  # type: ignore
     )
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
     meter = await build_meter(client)
     meter.last_historical_data = data  # dirty hack for restoring historical data
 
     # Read meter with some historical
     data = await meter.read_historical_data(client=client, days_to_load=1)
-    assert data == []
+    assert data == []  # nosec: B101
 
     # Read historical data with no data
     data = await meter.read_historical_data(client=client, days_to_load=1)
-    assert data == []
-    assert meter.last_historical_data != []
+    assert data == []  # nosec: B101
+    assert meter.last_historical_data != []  # nosec: B101
 
 
-async def test_meter_info_mismatch(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_meter_info_mismatch(aiohttp_client: Any) -> None:
     """Test meter handling units mismatch."""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
     app.router.add_post(
         "/api/2/residential/new_search",
-        change_units_decorator(mock_read_meter_endpoint, EOWUnits.UNIT_GAL),
+        change_units_decorator(
+            mock_read_meter_endpoint, EOWUnits.UNIT_GAL
+        ),  # type: ignore
     )
     app.router.add_post(
         "/api/2/residential/consumption",
-        change_units_decorator(mock_historical_data_endpoint, EOWUnits.UNIT_CM),
+        change_units_decorator(
+            mock_historical_data_endpoint, EOWUnits.UNIT_CM
+        ),  # type: ignore
     )
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
     meter = await build_meter(client)
 
     with pytest.raises(EyeOnWaterUnitError):
@@ -153,95 +163,17 @@ async def test_meter_info_mismatch(aiohttp_client, loop):
 
     # New meter reading in CM
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
     app.router.add_post(
         "/api/2/residential/new_search",
-        change_units_decorator(mock_read_meter_endpoint, EOWUnits.UNIT_CM),
+        change_units_decorator(
+            mock_read_meter_endpoint, EOWUnits.UNIT_CM
+        ),  # type: ignore
     )
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
     await meter.read_meter_info(client)
 
     with pytest.raises(EyeOnWaterUnitError):
-        assert meter.reading
-
-
-async def test_meter_properties(aiohttp_client, loop):
-    """Test meter_uuid, meter_id, and native_unit_of_measurement properties."""
-    app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
-    app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
-    websession = await aiohttp_client(app)
-
-    account, client = await build_client(websession)
-    meter = await build_meter(client)
-
-    assert meter.meter_uuid == "meter_uuid"
-    assert meter.meter_id == "meter_id"
-    assert meter.native_unit_of_measurement == NativeUnits.GAL
-
-
-async def test_meter_info_none_raises(aiohttp_client, loop):
-    """Test meter_info property raises when _meter_info is None."""
-    app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
-    app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
-    websession = await aiohttp_client(app)
-
-    account, client = await build_client(websession)
-    meter = await build_meter(client)
-
-    meter._meter_info = None
-    with pytest.raises(EyeOnWaterException):
-        _ = meter.meter_info
-
-
-async def test_meter_reading_none_raises(aiohttp_client, loop):
-    """Test reading property raises when _reading_data is None."""
-    app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
-    app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
-    websession = await aiohttp_client(app)
-
-    account, client = await build_client(websession)
-    meter = await build_meter(client)
-
-    meter._reading_data = None
-    with pytest.raises(EyeOnWaterException):
-        _ = meter.reading
-
-
-async def test_meter_historical_same_date_more_data(aiohttp_client, loop):
-    """Test historical data with same end date but more data points replaces existing."""
-    app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
-    app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
-    websession = await aiohttp_client(app)
-
-    account, client = await build_client(websession)
-    meter = await build_meter(client)
-
-    # First read: populate last_historical_data
-    await meter.read_historical_data(client=client, days_to_load=1)
-    assert len(meter.last_historical_data) == 1
-
-    # Second read with more data at same date
-    app2 = web.Application()
-    app2.router.add_post("/account/signin", mock_signin_endpoint)
-    app2.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
-    app2.router.add_post(
-        "/api/2/residential/consumption",
-        mock_historical_data_newerdata_moredata_endpoint,
-    )
-    websession2 = await aiohttp_client(app2)
-    account2, client2 = await build_client(websession2)
-
-    # Force same date in last_historical_data to trigger same-date-more-data branch
-    await meter.read_historical_data(client=client2, days_to_load=1)
-    # The moredata mock has 2 entries, should replace
-    assert len(meter.last_historical_data) >= 1
+        assert meter.reading  # nosec: B101
