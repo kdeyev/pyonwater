@@ -102,6 +102,11 @@ class MeterReader:
                     units=units,
                 )
             except EyeOnWaterResponseIsEmpty:
+                _LOGGER.warning(
+                    "Empty response from API for meter %s on %s - skipping this date",
+                    self.meter_uuid,
+                    date,
+                )
                 continue
 
         return statistics
@@ -114,8 +119,13 @@ class MeterReader:
 
         ts = data.timeseries[key].series
         statistics: list[DataPoint] = []
+        
+        _LOGGER.info(f"Converting {len(ts)} total data points from API response")
+        
+        skipped_count = 0
         for d in ts:
             if d.bill_read is None or d.display_unit is None:
+                skipped_count += 1
                 continue
 
             statistics.append(
@@ -126,6 +136,7 @@ class MeterReader:
                 ),
             )
 
+        _LOGGER.info(f"After filtering: {len(statistics)} valid points (skipped {skipped_count} points due to missing bill_read or display_unit)")
         statistics.sort(key=lambda d: d.dt)
 
         return statistics
@@ -157,9 +168,8 @@ class MeterReader:
             "date": date.strftime("%m/%d/%Y"),
             "furthest_zoom": "hr",
             "display_weeks": True,
+            "units": units.value if units is not None else "cm",  # Default to cm (cubic meters) if not specified
         }
-        if units is not None:
-            params["units"] = units.value
 
         query: dict[str, object] = {
             "params": params,
@@ -171,10 +181,15 @@ class MeterReader:
             json=query,
         )
         
+        _LOGGER.info(f"API Response for {date.strftime('%Y-%m-%d')}: {len(raw_data) if raw_data else 0} bytes")
+        _LOGGER.debug(f"Raw response (first 1000 chars): {raw_data[:1000] if raw_data else 'None'}")
+        
         # Handle empty responses from API
         if not raw_data or not raw_data.strip():
             msg = "Empty response from Eye on Water API"
             raise EyeOnWaterResponseIsEmpty(msg)
+        
+        _LOGGER.info(f"Received {len(raw_data)} bytes from API for date {date}")
         
         try:
             data = HistoricalData.model_validate_json(raw_data)
@@ -184,8 +199,11 @@ class MeterReader:
 
         key = f"{self.meter_uuid},0"
         if key not in data.timeseries:
-            msg = f"Meter {key} not found"
+            msg = f"Meter {key} not found in timeseries keys: {list(data.timeseries.keys())}"
+            _LOGGER.error(msg)
             raise EyeOnWaterResponseIsEmpty(msg)
+        
+        _LOGGER.debug(f"Found timeseries for {key}, series has {len(data.timeseries[key].series)} points")
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.convert, data, key)
