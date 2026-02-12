@@ -5,7 +5,7 @@ This document catalogs all API endpoints, their parameters, validation requireme
 ## Summary of Validations
 
 | Parameter | Status | Validation | Failure Mode |
-|-----------|--------|------------|--------------|
+| --------- | ------ | ---------- | ------------ |
 | `meter_uuid` | ✅ VALIDATED | Must be non-empty string | Empty responses, API errors |
 | `meter_id` | ✅ VALIDATED | Must be non-empty string | Lookup failures |
 | `days_to_load` | ✅ VALIDATED | Must be >= 1 | Invalid date ranges |
@@ -22,7 +22,7 @@ This document catalogs all API endpoints, their parameters, validation requireme
 ### RequestUnits Enum (For API Requests)
 
 | Enum Name | String Value | Description |
-|-----------|-------------|-------------|
+| --------- | ------------ | ----------- |
 | `RequestUnits.GALLONS` | `"gallons"` | US gallons |
 | `RequestUnits.CUBIC_FEET` | `"cf"` | Cubic feet |
 | `RequestUnits.CCF` | `"ccf"` | Centum cubic feet (100 ft³) |
@@ -37,7 +37,7 @@ This document catalogs all API endpoints, their parameters, validation requireme
 ### AggregationLevel Enum (Time Granularity)
 
 | Enum Name | String Value | Interval | Description |
-|-----------|-------------|----------|-------------|
+| --------- | ------------ | -------- | ----------- |
 | `AggregationLevel.QUARTER_HOURLY` | `"hr"` | 15 minutes | 15-minute intervals |
 | `AggregationLevel.HOURLY` | `"hourly"` | 1 hour | 1-hour intervals ⭐ **DEFAULT** |
 | `AggregationLevel.DAILY` | `"daily"` | 1 day | 1-day intervals |
@@ -51,16 +51,18 @@ This document catalogs all API endpoints, their parameters, validation requireme
 
 ### 1. Consumption API - `/api/2/residential/consumption`
 
-**Method:** POST  
+**Method:** POST
+
 **Purpose:** Retrieve historical water consumption data
 
-#### Request Payload Structure
+#### Consumption Payload Structure
+
 ```python
 {
     "params": {
         "source": str,           # REQUIRED - Must be "barnacle"
         "aggregate": str,        # REQUIRED - Aggregation level
-        "units": str,            # REQUIRED - Unit type (empty → empty response!)
+        "units": str,            # REQUIRED - Unit type
         "perspective": str,      # REQUIRED - Must be "billing"
         "combine": str,          # REQUIRED - Must be "true"
         "date": str,             # REQUIRED - Format: MM/DD/YYYY
@@ -80,10 +82,10 @@ This document catalogs all API endpoints, their parameters, validation requireme
 }
 ```
 
-#### Mandatory Parameters
+#### Consumption Parameters
 
 | Parameter | Value Type | Validation | Default | Can be Empty? | Notes |
-|-----------|------------|------------|---------|---------------|-------|
+| --------- | ---------- | ---------- | ------- | ------------- | ----- |
 | `source` | `str` | Hardcoded | `"barnacle"` | ❌ No | Fixed value, cannot be configured |
 | `aggregate` | `str` | Enum | - | ❌ No | From `AggregationLevel` enum |
 | `units` | `str` | Enum | `"cm"` | ❌ **CRITICAL** | Missing causes empty response |
@@ -92,16 +94,7 @@ This document catalogs all API endpoints, their parameters, validation requireme
 | `date` | `str` | Format | - | ❌ No | Must be MM/DD/YYYY format |
 | `meter.meter_uuid` | `list[str]` | Non-empty | - | ❌ No | Must contain valid UUID |
 
-#### Parameterized Fields
-
-| Field | Type | Enum | Current Validation | Potential Issues |
-|-------|------|------|-------------------|------------------|
-| `aggregate` | Required | `AggregationLevel` | ✅ Type-safe enum | Invalid values prevented by enum |
-| `units` | Required | `RequestUnits` | ✅ Defaults to "cm" | Missing parameter → empty API response |
-| `date` | Required | N/A | ⚠️ Implicit via `strftime` | Invalid datetime would raise exception |
-| `meter_uuid` | Required | N/A | ✅ Non-empty validation | Empty string → API errors |
-
-#### API Behavior
+#### Consumption Behavior
 
 - **Missing `units`**: Returns empty string `""` (silent failure)
 - **Missing other params**: Returns empty string `""` (silent failure)
@@ -111,10 +104,12 @@ This document catalogs all API endpoints, their parameters, validation requireme
 
 ### 2. Search API - `/api/2/residential/new_search`
 
-**Method:** POST  
+**Method:** POST
+
 **Purpose:** Get current meter reading and metadata
 
-#### Request Payload Structure
+#### Search Payload Structure
+
 ```python
 {
     "query": {
@@ -125,13 +120,13 @@ This document catalogs all API endpoints, their parameters, validation requireme
 }
 ```
 
-#### Mandatory Parameters
+#### Search Parameters
 
 | Parameter | Value Type | Validation | Can be Empty? | Notes |
-|-----------|------------|------------|---------------|-------|
+| --------- | ---------- | ---------- | ------------- | ----- |
 | `meter.meter_uuid` | `list[str]` | Non-empty | ❌ No | Must be valid UUID |
 
-#### API Behavior
+#### Search Behavior
 
 - **Missing `meter_uuid`**: API error or empty results
 - **Invalid `meter_uuid`**: Empty `hits` array
@@ -139,16 +134,18 @@ This document catalogs all API endpoints, their parameters, validation requireme
 
 ### 3. At-a-Glance API - `/api/2/residential/at_a_glance`
 
-**Method:** POST  
+**Method:** POST
+
 **Purpose:** Get quick summary statistics (this week, last week, average)
 
-#### Request Payload Structure
+#### At-a-Glance Payload Structure
+
 ```python
 {
     "params": {
         "source": str,       # REQUIRED - Must be "barnacle"
         "perspective": str,  # REQUIRED - Must be "billing"
-        "units": str         # Optional? (now defaulted for safety)
+        "units": str         # Optional (now defaulted for safety)
     },
     "query": {
         "query": {
@@ -160,16 +157,16 @@ This document catalogs all API endpoints, their parameters, validation requireme
 }
 ```
 
-#### Mandatory Parameters
+#### At-a-Glance Parameters
 
 | Parameter | Value Type | Validation | Default | Can be Empty? | Notes |
-|-----------|------------|------------|---------|---------------|-------|
+| --------- | ---------- | ---------- | ------- | ------------- | ----- |
 | `source` | `str` | Hardcoded | `"barnacle"` | ❌ No | Fixed value |
 | `perspective` | `str` | Hardcoded | `"billing"` | ❌ No | Fixed value |
 | `units` | `str` | Enum | `"cm"` | ⚠️ Unknown | Now defaulted for consistency |
 | `meter.meter_uuid` | `list[str]` | Non-empty | - | ❌ No | Must be valid UUID |
 
-#### API Behavior
+#### At-a-Glance Behavior
 
 - **Missing `units`**: Unknown if causes empty response (defaulted for safety)
 - **Missing `source`/`perspective`**: Likely empty response
@@ -182,7 +179,6 @@ This document catalogs all API endpoints, their parameters, validation requireme
 1. **Type Safety (Enums)**
    - `AggregationLevel`: Ensures only valid aggregation levels
    - `RequestUnits`: Ensures only valid unit types
-   - `NativeUnits`, `EOWUnits`: Response validation
 
 2. **Default Values**
    - `units`: Always defaults to `"cm"` in consumption API ✅
@@ -206,8 +202,7 @@ This document catalogs all API endpoints, their parameters, validation requireme
 1. **Date Validation** ⚠️
    - Currently implicit via `datetime.strftime()`
    - Invalid datetime object would raise exception before API call
-   - **Risk**: Low (Python datetime handles this)
-   - **Recommendation**: Current approach sufficient
+   - Risk: Low (Python datetime handles this)
 
 2. **Empty Response Handling** ✅
    - Added explicit check for empty API responses
@@ -240,7 +235,6 @@ This document catalogs all API endpoints, their parameters, validation requireme
    - ✅ Empty `meter_uuid` → `ValueError`
    - ✅ Empty `meter_id` → `ValueError`
    - ✅ `days_to_load < 1` → `ValueError`
-   - ✅ `days_to_load = 0` → `ValueError`
    - ✅ Whitespace-only inputs → `ValueError`
    - ✅ Enum validation tests for `AggregationLevel` and `RequestUnits`
 
@@ -263,7 +257,7 @@ This document catalogs all API endpoints, their parameters, validation requireme
 {
     "source": "barnacle",                    # Fixed
     "aggregate": aggregation.value,          # Enum (hourly, daily, etc.)
-    "units": units.value or "cm",           # Enum with default ⚠️ CRITICAL - always include
+    "units": units.value or "cm",           # Enum with default - always include
     "perspective": "billing",               # Fixed
     "combine": "true",                      # Fixed
     "date": date.strftime("%m/%d/%Y"),      # Formatted datetime
