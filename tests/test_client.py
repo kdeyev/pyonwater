@@ -47,6 +47,7 @@ async def test_client(aiohttp_client: Any) -> None:
     assert len(meters) == 1  # nosec: B101
 
 
+@pytest.mark.asyncio()
 async def test_client_403(aiohttp_client: Any) -> None:
     """Test handling rate limit errors during authentication."""
     app = web.Application()
