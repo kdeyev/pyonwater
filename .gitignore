@@ -162,9 +162,3 @@ cython_debug/
 # VS Code
 .vscode/
 *.code-workspace
-
-# Local documentation (not for PR)
-docs/
-
-# Phase 1 test results
-.phase1_results/
