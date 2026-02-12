@@ -71,7 +71,7 @@ async def test_historical_data_negative_days() -> None:
 
 def test_aggregation_level_enum_invalid_value() -> None:
     """Verify that invalid aggregation level values raise ValueError.
-    
+
     AggregationLevel is a Python Enum - trying to create an instance with
     an invalid value will raise ValueError. This provides type safety.
     """
@@ -92,7 +92,7 @@ def test_aggregation_level_enum_valid_values() -> None:
 
 def test_request_units_enum_invalid_value() -> None:
     """Verify that invalid unit values raise ValueError.
-    
+
     RequestUnits is a Python Enum - trying to create an instance with
     an invalid value will raise ValueError. This provides type safety.
     """
@@ -115,11 +115,10 @@ def test_request_units_enum_valid_values() -> None:
 
 def test_aggregation_has_default() -> None:
     """Verify that aggregation parameter has a default value.
-    
+
     The aggregation parameter defaults to HOURLY, so it cannot be None
     unless explicitly overridden (which type checking prevents).
     """
-    reader = MeterReader(meter_uuid="test-uuid", meter_id="12345")
     # The signature has: aggregation: AggregationLevel = AggregationLevel.HOURLY
     # So it always has a valid value
     assert AggregationLevel.HOURLY.value == "hourly"
@@ -127,17 +126,17 @@ def test_aggregation_has_default() -> None:
 
 def test_units_defaults_to_cm_when_none() -> None:
     """Verify that units parameter defaults to 'cm' when None.
-    
+
     The units parameter accepts RequestUnits | None, and when None is passed,
     the code defaults to 'cm' (cubic meters) in the API request.
     This prevents empty responses from the API.
     """
     # When units=None, the code uses: units.value if units is not None else "cm"
-    units_value = None
+    units_value: RequestUnits | None = None
     result = units_value.value if units_value is not None else "cm"
     assert result == "cm"
-    
+
     # When units is provided, it uses the enum value
     units_value = RequestUnits.GALLONS
-    result = units_value.value if units_value is not None else "cm"
+    result = units_value.value
     assert result == "gallons"
