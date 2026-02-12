@@ -87,7 +87,10 @@ async def test_meter_reader_wrong_units(aiohttp_client: Any) -> None:
 
 
 async def test_meter_reader_empty_response(aiohttp_client: Any) -> None:
-    """Test handling of empty API responses (real API behavior when params are invalid)."""
+    """Test handling of empty API responses.
+
+    Real API behavior when params are invalid.
+    """
     app = web.Application()
 
     app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
@@ -96,7 +99,10 @@ async def test_meter_reader_empty_response(aiohttp_client: Any) -> None:
     )
 
     async def mock_empty_response(_request: web.Request) -> web.Response:
-        """Mock endpoint that returns empty response like real API does with invalid params."""
+        """Mock endpoint that returns empty response like real API does.
+
+        Simulates real API behavior with invalid params.
+        """
         return web.Response(text="")
 
     app.router.add_post(
