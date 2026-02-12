@@ -84,3 +84,32 @@ async def test_meter_reader_wrong_units(aiohttp_client: Any) -> None:
 
     with pytest.raises(EyeOnWaterAPIError):
         await meter_reader.read_meter_info(client=client)
+
+
+async def test_meter_reader_empty_response(aiohttp_client: Any) -> None:
+    """Test handling of empty API responses (real API behavior when params are invalid)."""
+    app = web.Application()
+
+    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
+    app.router.add_post(
+        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
+    )
+
+    async def mock_empty_response(_request: web.Request) -> web.Response:
+        """Mock endpoint that returns empty response like real API does with invalid params."""
+        return web.Response(text="")
+
+    app.router.add_post(
+        "/api/2/residential/consumption", mock_empty_response  # type: ignore
+    )
+
+    websession = await aiohttp_client(app)
+
+    _, client = await build_client(websession)
+
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+
+    # Empty responses should be handled gracefully (not crash)
+    # The read_historical_data method catches EyeOnWaterResponseIsEmpty and continues
+    data = await meter_reader.read_historical_data(client=client, days_to_load=1)
+    assert data == []  # nosec: B101  # Empty response results in no data points

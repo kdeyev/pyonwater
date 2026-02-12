@@ -23,6 +23,28 @@ SEARCH_ENDPOINT = "/api/2/residential/new_search"
 CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
 AT_A_GLANCE_ENDPOINT = "/api/2/residential/at_a_glance"
 
+# EyeOnWater API Contract Requirements
+# =====================================
+# The consumption endpoint has strict requirements for request parameters.
+# Missing ANY required parameter will cause the API to return an empty response ("").
+#
+# REQUIRED Parameters for /api/2/residential/consumption:
+#   - source: Must be "barnacle"
+#   - aggregate: Aggregation level (e.g., "hourly", "daily", etc.)
+#   - units: Units for response (e.g., "cm", "gal") - CRITICAL: Cannot be omitted
+#   - perspective: Must be "billing"
+#   - combine: Must be "true"
+#   - date: Date in format MM/DD/YYYY
+#   - display_minutes, display_hours, display_days, display_weeks: All boolean
+#   - furthest_zoom: Typically "hr"
+#
+# Query structure:
+#   {"query": {"terms": {"meter.meter_uuid": [<uuid>]}}}
+#
+# Historical Context:
+#   PR #36 (Feb 2026) made 'units' conditional, causing all requests with units=None
+#   to return empty responses. Always include all required parameters with defaults.
+
 _LOGGER = logging.getLogger(__name__)
 
 
