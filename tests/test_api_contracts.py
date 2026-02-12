@@ -8,6 +8,8 @@ from typing import Any
 
 from aiohttp import web
 
+import pytest
+
 from conftest import (
     build_client,
     mock_historical_data_endpoint,
@@ -17,6 +19,7 @@ from conftest import (
 from pyonwater import MeterReader
 
 
+@pytest.mark.asyncio()
 async def test_new_search_request_payload(aiohttp_client: Any) -> None:
     """Validate new_search request shape."""
     app = web.Application()
@@ -40,6 +43,7 @@ async def test_new_search_request_payload(aiohttp_client: Any) -> None:
     await meter_reader.read_meter_info(client=client)
 
 
+@pytest.mark.asyncio()
 async def test_consumption_request_payload(aiohttp_client: Any) -> None:
     """Validate consumption request params and query string."""
     app = web.Application()
@@ -76,6 +80,7 @@ async def test_consumption_request_payload(aiohttp_client: Any) -> None:
     await meter_reader.read_historical_data_one_day(client=client, date=test_date)
 
 
+@pytest.mark.asyncio()
 async def test_consumption_validates_required_params(aiohttp_client: Any) -> None:
     """Verify that validating mock endpoint mimics real API behavior.
 

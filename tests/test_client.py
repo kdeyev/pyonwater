@@ -21,6 +21,7 @@ from pyonwater import (
 )
 
 
+@pytest.mark.asyncio()
 async def test_client(aiohttp_client: Any) -> None:
     """Basic client test."""
     app = web.Application()
@@ -71,6 +72,7 @@ async def test_client_403(aiohttp_client: Any) -> None:
     assert client.authenticated is False  # nosec: B101
 
 
+@pytest.mark.asyncio()
 async def test_client_400(aiohttp_client: Any) -> None:
     """Test handling Auth errors during authentication."""
     app = web.Application()
@@ -96,6 +98,7 @@ async def test_client_400(aiohttp_client: Any) -> None:
     assert client.authenticated is False  # nosec: B101
 
 
+@pytest.mark.asyncio()
 async def test_client_data_403(aiohttp_client: Any) -> None:
     """Test handling rate limit errors."""
     app = web.Application()
@@ -124,6 +127,7 @@ async def test_client_data_403(aiohttp_client: Any) -> None:
         await account.fetch_meters(client=client)
 
 
+@pytest.mark.asyncio()
 async def test_client_data_401(aiohttp_client: Any) -> None:
     """Test handling token expiration errors."""
     app = web.Application()
@@ -152,6 +156,7 @@ async def test_client_data_401(aiohttp_client: Any) -> None:
     await account.fetch_meters(client=client)
 
 
+@pytest.mark.asyncio()
 async def test_client_data_404(aiohttp_client: Any) -> None:
     """Test handling 404 errors."""
     app = web.Application()

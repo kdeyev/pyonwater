@@ -16,6 +16,7 @@ from conftest import (
 from pyonwater import EyeOnWaterAPIError, MeterReader
 
 
+@pytest.mark.asyncio()
 async def test_meter_reader(aiohttp_client: Any) -> None:
     """Basic meter reader test."""
     app = web.Application()
@@ -40,6 +41,7 @@ async def test_meter_reader(aiohttp_client: Any) -> None:
     await meter_reader.read_historical_data(client=client, days_to_load=1)
 
 
+@pytest.mark.asyncio()
 async def test_meter_reader_nodata(aiohttp_client: Any) -> None:
     """Basic meter reader test."""
     app = web.Application()
@@ -66,6 +68,7 @@ async def test_meter_reader_nodata(aiohttp_client: Any) -> None:
     assert data == []  # nosec: B101
 
 
+@pytest.mark.asyncio()
 async def test_meter_reader_wrong_units(aiohttp_client: Any) -> None:
     """Test reading date with unknown units."""
     app = web.Application()
@@ -86,6 +89,7 @@ async def test_meter_reader_wrong_units(aiohttp_client: Any) -> None:
         await meter_reader.read_meter_info(client=client)
 
 
+@pytest.mark.asyncio()
 async def test_meter_reader_empty_response(aiohttp_client: Any) -> None:
     """Test handling of empty API responses.
 

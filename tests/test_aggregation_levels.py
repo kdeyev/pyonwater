@@ -33,6 +33,7 @@ TEST_DATE = (datetime.now() - timedelta(days=1)).replace(
         AggregationLevel.YEARLY,
     ],
 )
+@pytest.mark.asyncio()
 async def test_aggregation_levels(
     aiohttp_client: Any, aggregation: AggregationLevel
 ) -> None:
@@ -75,6 +76,7 @@ async def test_aggregation_levels(
         RequestUnits.FLUID_BARRELS,
     ],
 )
+@pytest.mark.asyncio()
 async def test_request_units(aiohttp_client: Any, units: RequestUnits) -> None:
     """Test that all request units are supported."""
     app = web.Application()
@@ -100,6 +102,7 @@ async def test_request_units(aiohttp_client: Any, units: RequestUnits) -> None:
     assert isinstance(data, list)  # nosec: B101
 
 
+@pytest.mark.asyncio()
 async def test_default_aggregation(aiohttp_client: Any) -> None:
     """Test that default aggregation level (HOURLY) works without explicit param."""
     app = web.Application()

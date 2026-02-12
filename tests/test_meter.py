@@ -49,6 +49,7 @@ mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
         (EOWUnits.UNIT_LITER_LC, NativeUnits.CM, 0.001),
     ],
 )
+@pytest.mark.asyncio()
 async def test_meter_info(
     aiohttp_client: Any, units: Any, expected_native_unit: Any, expected_factor: Any
 ) -> None:
@@ -85,6 +86,7 @@ async def test_meter_info(
     assert meter.last_historical_data[0].unit == expected_native_unit  # nosec: B101
 
 
+@pytest.mark.asyncio()
 async def test_meter_historical_data_no_data(aiohttp_client: Any) -> None:
     """Basic meter test."""
     app = web.Application()
@@ -134,6 +136,7 @@ async def test_meter_historical_data_no_data(aiohttp_client: Any) -> None:
     assert meter.last_historical_data != []  # nosec: B101
 
 
+@pytest.mark.asyncio()
 async def test_meter_info_mismatch(aiohttp_client: Any) -> None:
     """Test meter handling units mismatch."""
     app = web.Application()
