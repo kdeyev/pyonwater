@@ -170,6 +170,12 @@ class MeterReader:
             method="post",
             json=query,
         )
+        
+        # Handle empty responses from API
+        if not raw_data or not raw_data.strip():
+            msg = "Empty response from Eye on Water API"
+            raise EyeOnWaterResponseIsEmpty(msg)
+        
         try:
             data = HistoricalData.model_validate_json(raw_data)
         except ValidationError as e:
