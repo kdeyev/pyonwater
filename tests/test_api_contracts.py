@@ -47,6 +47,7 @@ async def test_consumption_request_payload(aiohttp_client: Any) -> None:
         assert params["aggregate"] == "hourly"  # nosec: B101
         assert params["perspective"] == "billing"  # nosec: B101
         assert params["date"] == "01/02/2024"  # nosec: B101
+        assert "units" in params  # nosec: B101  # Validate units parameter is always present
         terms = payload["query"]["query"]["terms"]
         assert terms["meter.meter_uuid"] == ["meter_uuid"]  # nosec: B101
 
