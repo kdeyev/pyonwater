@@ -83,6 +83,7 @@ await meter.read_historical_data(
 ### Available Options
 
 **Aggregation Levels:**
+
 - `AggregationLevel.QUARTER_HOURLY` - 15-minute intervals
 - `AggregationLevel.HOURLY` - 1-hour intervals (default)
 - `AggregationLevel.DAILY` - 1-day intervals
@@ -91,6 +92,7 @@ await meter.read_historical_data(
 - `AggregationLevel.YEARLY` - 1-year intervals
 
 **Units:**
+
 - `RequestUnits.GALLONS` - US gallons
 - `RequestUnits.CUBIC_FEET` - Cubic feet
 - `RequestUnits.CCF` - Centum cubic feet (100 ft³)
