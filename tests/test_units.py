@@ -1,6 +1,7 @@
 """Tests for units conversion."""  # nosec: B101, B106
 
 from typing import Any, cast
+import math
 
 import pytest
 
@@ -44,29 +45,25 @@ def test_convert_units() -> None:
     result = convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_GAL, 1.0)
     assert result == 1.0  # nosec: B101
 
-    approx_1000 = pytest.approx(1000.0)  # type: ignore[reportUnknownMemberType]
     result = convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_KGAL, 1.0)
-    assert result == approx_1000  # nosec: B101
+    assert math.isclose(result, 1000.0, rel_tol=1e-12, abs_tol=1e-12)
 
-    approx_100 = pytest.approx(100.0)  # type: ignore[reportUnknownMemberType]
     result = convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_100_GAL, 1.0)
-    assert result == approx_100  # nosec: B101
+    assert math.isclose(result, 100.0, rel_tol=1e-12, abs_tol=1e-12)
 
-    approx_10 = pytest.approx(10.0)  # type: ignore[reportUnknownMemberType]
     result = convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_10_GAL, 1.0)
-    assert result == approx_10  # nosec: B101
+    assert math.isclose(result, 10.0, rel_tol=1e-12, abs_tol=1e-12)
 
     with pytest.raises(EyeOnWaterUnitError):
-        approx_10_err = pytest.approx(10.0)  # type: ignore[reportUnknownMemberType]
         result = convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_CF, 1.0)
-        assert result == approx_10_err  # nosec: B101
+        assert math.isclose(result, 10.0, rel_tol=1e-12, abs_tol=1e-12)
 
     result = convert_to_native(NativeUnits.CF, EOWUnits.UNIT_CF, 1)
     assert result == 1.0  # nosec: B101
     result = convert_to_native(NativeUnits.CF, EOWUnits.UNIT_CUBIC_FEET, 1)
     assert result == 1.0  # nosec: B101
     result = convert_to_native(NativeUnits.CF, EOWUnits.UNIT_CCF, 1.0)
-    assert result == 100.0  # nosec: B101
+    assert math.isclose(result, 100.0, rel_tol=1e-12, abs_tol=1e-12)
     with pytest.raises(EyeOnWaterUnitError):
         convert_to_native(NativeUnits.CF, EOWUnits.UNIT_GAL, 1.0)
 
@@ -75,11 +72,11 @@ def test_convert_units() -> None:
     result = convert_to_native(NativeUnits.CM, EOWUnits.UNIT_CUBIC_METER, 1.0)
     assert result == 1.0  # nosec: B101
     result = convert_to_native(NativeUnits.CM, EOWUnits.UNIT_LITER, 1000.0)
-    assert result == 1.0  # nosec: B101
+    assert math.isclose(result, 1.0, rel_tol=1e-12, abs_tol=1e-12)
     result = convert_to_native(NativeUnits.CM, EOWUnits.UNIT_LITERS, 1000.0)
-    assert result == 1.0  # nosec: B101
+    assert math.isclose(result, 1.0, rel_tol=1e-12, abs_tol=1e-12)
     result = convert_to_native(NativeUnits.CM, EOWUnits.UNIT_LITER_LC, 1000.0)
-    assert result == 1.0  # nosec: B101
+    assert math.isclose(result, 1.0, rel_tol=1e-12, abs_tol=1e-12)
 
     with pytest.raises(EyeOnWaterUnitError):
         convert_to_native(NativeUnits.CM, EOWUnits.UNIT_GAL, 1.0)
