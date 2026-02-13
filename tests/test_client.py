@@ -25,11 +25,9 @@ from pyonwater import (
 async def test_client(aiohttp_client: Any) -> None:
     """Basic client test."""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
-    app.router.add_get("/dashboard/user", mock_get_meters_endpoint)  # type: ignore
-    app.router.add_post(  # type: ignore
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/dashboard/user", mock_get_meters_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
     account = Account(  # nosec: B106
@@ -53,11 +51,9 @@ async def test_client_403(aiohttp_client: Any) -> None:
     app = web.Application()
     app.router.add_post(
         "/account/signin",
-        add_error_decorator(mock_signin_endpoint, 403),  # type: ignore
+        add_error_decorator(mock_signin_endpoint, 403),
     )
-    app.router.add_post(  # type: ignore
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
     account = Account(  # nosec: B106
@@ -79,11 +75,9 @@ async def test_client_400(aiohttp_client: Any) -> None:
     app = web.Application()
     app.router.add_post(
         "/account/signin",
-        add_error_decorator(mock_signin_endpoint, 400),  # type: ignore
+        add_error_decorator(mock_signin_endpoint, 400),
     )
-    app.router.add_post(  # type: ignore
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
     account = Account(  # nosec: B106
@@ -103,14 +97,12 @@ async def test_client_400(aiohttp_client: Any) -> None:
 async def test_client_data_403(aiohttp_client: Any) -> None:
     """Test handling rate limit errors."""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
+    app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get(
         "/dashboard/user",
-        add_error_decorator(mock_get_meters_endpoint, 403),  # type: ignore
+        add_error_decorator(mock_get_meters_endpoint, 403, failures=3),
     )
-    app.router.add_post(  # type: ignore
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
     account = Account(  # nosec: B106
@@ -132,14 +124,12 @@ async def test_client_data_403(aiohttp_client: Any) -> None:
 async def test_client_data_401(aiohttp_client: Any) -> None:
     """Test handling token expiration errors."""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
+    app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get(
         "/dashboard/user",
-        add_error_decorator(mock_get_meters_endpoint, 401),  # type: ignore
+        add_error_decorator(mock_get_meters_endpoint, 401),
     )
-    app.router.add_post(  # type: ignore
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
     account = Account(  # nosec: B106
@@ -161,14 +151,12 @@ async def test_client_data_401(aiohttp_client: Any) -> None:
 async def test_client_data_404(aiohttp_client: Any) -> None:
     """Test handling 404 errors."""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
+    app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get(
         "/dashboard/user",
-        add_error_decorator(mock_get_meters_endpoint, 404),  # type: ignore
+        add_error_decorator(mock_get_meters_endpoint, 404),
     )
-    app.router.add_post(  # type: ignore
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
     account = Account(  # nosec: B106

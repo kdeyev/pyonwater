@@ -109,17 +109,20 @@ def change_units_decorator(
 
 
 def add_error_decorator(
-    endpoint: Callable[[web.Request], Awaitable[web.Response]], code: int
+    endpoint: Callable[[web.Request], Awaitable[web.Response]],
+    code: int,
+    *,
+    failures: int = 1,
 ) -> Callable[[web.Request], Awaitable[web.Response]]:
     """Decorator for adding one error to another endpoint.
 
-    The second call will be successful.
+    The call will fail `failures` times, then succeed.
     """
     counter = 0
 
     async def mock(_request: web.Request) -> web.Response:
         nonlocal counter
-        if counter == 0:
+        if counter < failures:
             counter += 1
             return web.Response(status=code)
         return await endpoint(_request)

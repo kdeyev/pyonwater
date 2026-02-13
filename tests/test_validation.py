@@ -76,7 +76,7 @@ def test_aggregation_level_enum_invalid_value() -> None:
     an invalid value will raise ValueError. This provides type safety.
     """
     with pytest.raises(ValueError):
-        AggregationLevel("invalid_aggregation")  # type: ignore
+        AggregationLevel("invalid_aggregation")
 
 
 def test_aggregation_level_enum_valid_values() -> None:
@@ -97,7 +97,7 @@ def test_request_units_enum_invalid_value() -> None:
     an invalid value will raise ValueError. This provides type safety.
     """
     with pytest.raises(ValueError):
-        RequestUnits("invalid_unit")  # type: ignore
+        RequestUnits("invalid_unit")
 
 
 def test_request_units_enum_valid_values() -> None:

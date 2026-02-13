@@ -90,13 +90,9 @@ async def test_consumption_validates_required_params(aiohttp_client: Any) -> Non
     """
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_post(
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     # Use the improved validating mock that checks for required params
-    app.router.add_post(
-        "/api/2/residential/consumption", mock_historical_data_endpoint  # type: ignore
-    )
+    app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
 
     websession = await aiohttp_client(app)
     _, client = await build_client(websession)
