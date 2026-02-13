@@ -4,6 +4,16 @@
 
 [![Coverage Status](https://coveralls.io/repos/github/kdeyev/pyonwater/badge.svg?branch=main)](https://coveralls.io/github/kdeyev/pyonwater?branch=main)
 
+## Features
+
+- **Async/await** - Built on aiohttp for efficient async operations
+- **Type-safe** - Full type hints and Pydantic v2 validation
+- **Production-ready** - Configurable timeouts, automatic retries with exponential backoff
+- **Comprehensive** - Access meter readings, historical data, and account information
+- **Flexible units** - Support for gallons, cubic feet, liters, cubic meters, and more
+- **Data processing** - Utilities for monotonic enforcement, filtering, and unit conversion
+- **Well-tested** - 97% test coverage with extensive validation
+
 ## Installation
 
 ```bash
@@ -29,32 +39,78 @@ async def main() -> None:
         username="your EOW login",
         password="your EOW password",
     )
-    websession = aiohttp.ClientSession()
-    client = Client(websession=websession, account=account)
+    
+    async with aiohttp.ClientSession() as websession:
+        client = Client(websession=websession, account=account)
+        await client.authenticate()
 
-    await client.authenticate()
+        meters = await account.fetch_meters(client=client)
+        print(f"{len(meters)} meters found")
+        
+        for meter in meters:
+            # Read meter info
+            await meter.read_meter_info(client=client)
+            print(f"meter {meter.meter_uuid} shows {meter.reading}")
+            print(f"meter {meter.meter_uuid} info {meter.meter_info}")
 
-    meters = await account.fetch_meters(client=client)
-    print(f"{len(meters)} meters found")
-    for meter in meters:
-        # Read meter info
-        await meter.read_meter_info(client=client)
-        print(f"meter {meter.meter_uuid} shows {meter.reading}")
-        print(f"meter {meter.meter_uuid} info {meter.meter_info}")
-
-        # Read historical data (default: 3 days, hourly aggregation)
-        await meter.read_historical_data(client=client, days_to_load=3)
-        for d in meter.last_historical_data:
-            print(d)
-
-    await websession.close()
+            # Read historical data (default: 3 days, hourly aggregation)
+            await meter.read_historical_data(client=client, days_to_load=3)
+            for d in meter.last_historical_data:
+                print(d)
 
 
-loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
+asyncio.run(main())
 ```
 
 ## Advanced Usage
+
+### Configuring Request Timeouts
+
+The client includes robust timeout configuration to prevent hung requests:
+
+```python
+from aiohttp import ClientTimeout
+
+# Custom timeout configuration
+timeout = ClientTimeout(
+    total=30,      # Maximum time for entire request (seconds)
+    connect=10,    # Maximum time to establish connection
+    sock_read=20   # Maximum time to read data from socket
+)
+
+client = Client(websession=websession, account=account, timeout=timeout)
+```
+
+Default timeout values are: `total=30s`, `connect=10s`, `sock_read=20s`.
+
+The client automatically retries on authentication expiration and rate limiting with exponential backoff (max 3 attempts).
+
+### Error Handling
+
+The library provides specific exceptions for different error scenarios:
+
+```python
+from pyonwater import (
+    EyeOnWaterAuthError,       # Invalid username/password
+    EyeOnWaterAuthExpired,     # Token expired (auto-retried)
+    EyeOnWaterRateLimitError,  # Rate limit hit (auto-retried)
+    EyeOnWaterAPIError,        # Unknown API error
+    EyeOnWaterResponseIsEmpty, # Valid response but no data
+    EyeOnWaterUnitError,       # Unit conversion error
+)
+
+try:
+    await client.authenticate()
+    meters = await account.fetch_meters(client=client)
+except EyeOnWaterAuthError:
+    print("Invalid credentials")
+except EyeOnWaterRateLimitError:
+    print("Rate limit exceeded - retry with backoff")
+except EyeOnWaterAPIError as e:
+    print(f"API error: {e}")
+```
+
+Note: `EyeOnWaterAuthExpired` and `EyeOnWaterRateLimitError` are automatically retried with exponential backoff.
 
 ### Specifying Units and Aggregation
 
@@ -101,6 +157,91 @@ await meter.read_historical_data(
 - `RequestUnits.IMPERIAL_GALLONS` - Imperial gallons
 - `RequestUnits.OIL_BARRELS` - Oil barrels
 - `RequestUnits.FLUID_BARRELS` - Fluid barrels
+
+### Data Processing Utilities
+
+The library includes helper functions for processing historical data:
+
+#### Monotonic Total Enforcement
+
+Ensures cumulative meter readings never decrease (useful for handling resets or rounding errors):
+
+```python
+from pyonwater import enforce_monotonic_total
+
+# Normalize historical data to be monotonically increasing
+normalized = enforce_monotonic_total(
+    meter.last_historical_data,
+    clamp_min=0.0  # Optional: enforce minimum value
+)
+```
+
+#### Time-Based Filtering
+
+Filter data points to avoid duplicates when importing to statistics engines:
+
+```python
+from datetime import datetime
+from pyonwater import filter_points_after
+
+# Only get data after a specific time
+since = datetime(2026, 1, 1, tzinfo=timezone.utc)
+recent_data = filter_points_after(meter.last_historical_data, since=since)
+```
+
+#### Unit Conversion
+
+Convert between meter native units and display units:
+
+```python
+from pyonwater import convert_to_native, deduce_native_units, EOWUnits, NativeUnits
+
+# Deduce native units from reading unit
+native = deduce_native_units(EOWUnits.UNIT_KGAL)  # Returns NativeUnits.GAL
+
+# Convert reading to native units
+gallons = convert_to_native(
+    NativeUnits.GAL,
+    EOWUnits.UNIT_KGAL,
+    value=5.0  # 5 kGal = 5000 gallons
+)
+```
+
+## Quick Reference
+
+Common patterns for everyday use:
+
+```python
+from pyonwater import (
+    Account, Client, 
+    AggregationLevel, RequestUnits,
+    EyeOnWaterAuthError,
+)
+from aiohttp import ClientSession, ClientTimeout
+
+# Initialize with custom timeout
+async with ClientSession() as session:
+    timeout = ClientTimeout(total=30, connect=10, sock_read=20)
+    client = Client(session, Account(...), timeout=timeout)
+    
+    # Authenticate
+    await client.authenticate()
+    
+    # Get all meters
+    meters = await account.fetch_meters(client)
+    
+    # Get current reading
+    await meters[0].read_meter_info(client)
+    print(meters[0].reading)
+    
+    # Get 30 days of hourly data in gallons
+    await meters[0].read_historical_data(
+        client, 
+        days_to_load=30,
+        aggregation=AggregationLevel.HOURLY,
+        units=RequestUnits.GALLONS
+    )
+```
 
 ## API Documentation
 
