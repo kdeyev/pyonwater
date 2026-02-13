@@ -124,7 +124,7 @@ class MeterReader:
         date_list = [today - datetime.timedelta(days=x) for x in range(0, days_to_load)]
         date_list.reverse()
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "requesting historical statistics for %s on %s",
             self.meter_uuid,
             date_list,
@@ -133,7 +133,7 @@ class MeterReader:
         statistics: list[DataPoint] = []
 
         for date in date_list:
-            _LOGGER.info(
+            _LOGGER.debug(
                 "requesting historical statistics for %s on %s",
                 self.meter_uuid,
                 date,
@@ -164,7 +164,7 @@ class MeterReader:
         ts = data.timeseries[key].series
         statistics: list[DataPoint] = []
 
-        _LOGGER.info("Converting %d total data points from API response", len(ts))
+        _LOGGER.debug("Converting %d total data points from API response", len(ts))
 
         skipped_count = 0
         for d in ts:
@@ -180,7 +180,7 @@ class MeterReader:
                 ),
             )
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "After filtering: %d valid points "
             "(skipped %d points due to missing bill_read or display_unit)",
             len(statistics),
@@ -232,26 +232,34 @@ class MeterReader:
             json=query,
         )
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "API Response for %s: %d bytes",
             date.strftime("%Y-%m-%d"),
             len(raw_data) if raw_data else 0,
         )
-        _LOGGER.debug(
-            "Raw response (first 1000 chars): %s",
-            raw_data[:1000] if raw_data else "None",
-        )
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(
+                "Raw response (first 1000 chars): %s",
+                raw_data[:1000] if raw_data else "None",
+            )
 
         # Handle empty responses from API
         if not raw_data or not raw_data.strip():
             msg = "Empty response from Eye on Water API"
             raise EyeOnWaterResponseIsEmpty(msg)
 
-        _LOGGER.info("Received %d bytes from API for date %s", len(raw_data), date)
+        _LOGGER.debug("Received %d bytes from API for date %s", len(raw_data), date)
 
         try:
             data = HistoricalData.model_validate_json(raw_data)
         except ValidationError as e:
+            _LOGGER.error("Pydantic validation error: %s", e)
+            _LOGGER.error("Validation errors detail: %s", e.errors())
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                _LOGGER.debug(
+                    "Raw API response (first 1000 chars): %s",
+                    raw_data[:1000] if raw_data else "None",
+                )
             msg = f"Unexpected EOW response {e}"
             raise EyeOnWaterAPIError(msg) from e
 
