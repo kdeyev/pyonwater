@@ -40,12 +40,10 @@ async def test_aggregation_levels(
     """Test that all aggregation levels are supported."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post(
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
-    app.router.add_post(  # type: ignore
         "/api/2/residential/consumption",
-        build_consumption_endpoint_with_aggregation(aggregation.value),  # type: ignore
+        build_consumption_endpoint_with_aggregation(aggregation.value),
     )
 
     websession = await aiohttp_client(app)
@@ -81,12 +79,10 @@ async def test_request_units(aiohttp_client: Any, units: RequestUnits) -> None:
     """Test that all request units are supported."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post(
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
-    app.router.add_post(  # type: ignore
         "/api/2/residential/consumption",
-        build_consumption_endpoint_with_aggregation("hourly"),  # type: ignore
+        build_consumption_endpoint_with_aggregation("hourly"),
     )
 
     websession = await aiohttp_client(app)
@@ -107,12 +103,10 @@ async def test_default_aggregation(aiohttp_client: Any) -> None:
     """Test that default aggregation level (HOURLY) works without explicit param."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post(
-        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
-    )
-    app.router.add_post(  # type: ignore
         "/api/2/residential/consumption",
-        build_consumption_endpoint_with_aggregation("hourly"),  # type: ignore
+        build_consumption_endpoint_with_aggregation("hourly"),
     )
 
     websession = await aiohttp_client(app)
