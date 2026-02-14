@@ -1,12 +1,11 @@
 # pyonwater
-
 [EyeOnWater](eyeonwater.com) client library
 
 [![Coverage Status](https://coveralls.io/repos/github/kdeyev/pyonwater/badge.svg?branch=main)](https://coveralls.io/github/kdeyev/pyonwater?branch=main)
 
 The usage example:
 
-```python
+```
 """Example showing the EOW Client usage."""
 
 import asyncio
