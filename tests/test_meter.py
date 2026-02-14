@@ -49,20 +49,21 @@ mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
         (EOWUnits.UNIT_LITER_LC, NativeUnits.CM, 0.001),
     ],
 )
+@pytest.mark.asyncio()
 async def test_meter_info(
     aiohttp_client: Any, units: Any, expected_native_unit: Any, expected_factor: Any
 ) -> None:
     """Test meter returns expected units."""
     app = web.Application()
 
-    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
+    app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post(
         "/api/2/residential/new_search",
-        change_units_decorator(mock_read_meter_endpoint, units),  # type: ignore
+        change_units_decorator(mock_read_meter_endpoint, units),
     )
     app.router.add_post(
         "/api/2/residential/consumption",
-        change_units_decorator(mock_historical_data_endpoint, units),  # type: ignore
+        change_units_decorator(mock_historical_data_endpoint, units),
     )
 
     websession = await aiohttp_client(app)
@@ -85,17 +86,18 @@ async def test_meter_info(
     assert meter.last_historical_data[0].unit == expected_native_unit  # nosec: B101
 
 
+@pytest.mark.asyncio()
 async def test_meter_historical_data_no_data(aiohttp_client: Any) -> None:
     """Basic meter test."""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
+    app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post(
         "/api/2/residential/new_search",
-        mock_read_meter_endpoint,  # type: ignore
+        mock_read_meter_endpoint,
     )
     app.router.add_post(
         "/api/2/residential/consumption",
-        mock_historical_data_endpoint,  # type: ignore
+        mock_historical_data_endpoint,
     )
     websession = await aiohttp_client(app)
 
@@ -109,14 +111,14 @@ async def test_meter_historical_data_no_data(aiohttp_client: Any) -> None:
 
     # New meter reading in CM
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
+    app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post(
         "/api/2/residential/new_search",
-        mock_read_meter_endpoint,  # type: ignore
+        mock_read_meter_endpoint,
     )
     app.router.add_post(
         "/api/2/residential/consumption",
-        mock_historical_data_nodata_endpoint,  # type: ignore
+        mock_historical_data_nodata_endpoint,
     )
     websession = await aiohttp_client(app)
 
@@ -134,21 +136,18 @@ async def test_meter_historical_data_no_data(aiohttp_client: Any) -> None:
     assert meter.last_historical_data != []  # nosec: B101
 
 
+@pytest.mark.asyncio()
 async def test_meter_info_mismatch(aiohttp_client: Any) -> None:
     """Test meter handling units mismatch."""
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
+    app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post(
         "/api/2/residential/new_search",
-        change_units_decorator(
-            mock_read_meter_endpoint, EOWUnits.UNIT_GAL
-        ),  # type: ignore
+        change_units_decorator(mock_read_meter_endpoint, EOWUnits.UNIT_GAL),
     )
     app.router.add_post(
         "/api/2/residential/consumption",
-        change_units_decorator(
-            mock_historical_data_endpoint, EOWUnits.UNIT_CM
-        ),  # type: ignore
+        change_units_decorator(mock_historical_data_endpoint, EOWUnits.UNIT_CM),
     )
     websession = await aiohttp_client(app)
 
@@ -160,12 +159,10 @@ async def test_meter_info_mismatch(aiohttp_client: Any) -> None:
 
     # New meter reading in CM
     app = web.Application()
-    app.router.add_post("/account/signin", mock_signin_endpoint)  # type: ignore
+    app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post(
         "/api/2/residential/new_search",
-        change_units_decorator(
-            mock_read_meter_endpoint, EOWUnits.UNIT_CM
-        ),  # type: ignore
+        change_units_decorator(mock_read_meter_endpoint, EOWUnits.UNIT_CM),
     )
     websession = await aiohttp_client(app)
 
