@@ -54,6 +54,7 @@ def test_convert_units():
     assert convert_to_native(NativeUnits.CF, EOWUnits.UNIT_CF, 1) == 1.0
     assert convert_to_native(NativeUnits.CF, EOWUnits.UNIT_CUBIC_FEET, 1) == 1.0
     assert convert_to_native(NativeUnits.CF, EOWUnits.UNIT_CCF, 1.0) == 100.0
+    assert convert_to_native(NativeUnits.CF, EOWUnits.UNIT_10_CF, 1.0) == 10.0
     with pytest.raises(EyeOnWaterUnitError):
         assert convert_to_native(NativeUnits.CF, EOWUnits.UNIT_GAL, 1.0)
 

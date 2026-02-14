@@ -1,5 +1,6 @@
 """Tests for pyonwater meter reader."""
 
+import json
 
 from aiohttp import web
 from conftest import (
@@ -76,3 +77,51 @@ async def test_meter_reader_wrong_units(aiohttp_client, loop):
 
     with pytest.raises(EyeOnWaterAPIError):
         await meter_reader.read_meter_info(client=client)
+
+
+async def test_meter_reader_multiple_meters(aiohttp_client, loop):
+    """Test that multiple meter readings raises an exception."""
+
+    def mock_multiple_meters_endpoint(request):
+        with open("tests//mock_data/read_meter_mock_anonymized.json") as f:
+            data = json.load(f)
+            # Duplicate the meter entry to simulate multiple meters
+            hits = data["elastic_results"]["hits"]["hits"]
+            hits.append(hits[0])
+            return web.Response(text=json.dumps(data))
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_multiple_meters_endpoint)
+
+    websession = await aiohttp_client(app)
+
+    account, client = await build_client(websession)
+
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+
+    with pytest.raises(Exception, match="More than one meter reading found"):
+        await meter_reader.read_meter_info(client=client)
+
+
+async def test_meter_reader_invalid_historical_response(aiohttp_client, loop):
+    """Test that invalid historical data response raises EyeOnWaterAPIError."""
+
+    def mock_invalid_historical_endpoint(request):
+        return web.Response(text='{"invalid": "data"}')
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    app.router.add_post(
+        "/api/2/residential/consumption", mock_invalid_historical_endpoint
+    )
+
+    websession = await aiohttp_client(app)
+
+    account, client = await build_client(websession)
+
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+
+    with pytest.raises(EyeOnWaterAPIError):
+        await meter_reader.read_historical_data(client=client, days_to_load=1)
