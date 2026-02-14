@@ -1,5 +1,4 @@
 # ruff: noqa
-"""Models for historical consumption data from EyeOnWater API."""
 
 from __future__ import annotations
 
@@ -12,14 +11,10 @@ from .units import EOWUnits
 
 
 class Register0EncoderItem(BaseModel):
-    """Encoder dials information."""
-
     dials: Optional[int] = None
 
 
 class Hit(BaseModel):
-    """Meter and account metadata from search results."""
-
     # Mandatory fields
     meter_timezone: list[str] = Field(..., alias="meter.timezone")
 
@@ -56,8 +51,6 @@ class Hit(BaseModel):
 
 
 class Params(BaseModel):
-    """Request parameters used for the API call."""
-
     # Optional fields
     start_date_utc: Optional[float] = None
     date: Optional[datetime] = None
@@ -77,8 +70,6 @@ class Params(BaseModel):
 
 
 class Series(BaseModel):
-    """Individual data point in a time series."""
-
     # Mandatory fields
     date: datetime
     display_unit: Optional[EOWUnits] = None
@@ -96,8 +87,6 @@ class Series(BaseModel):
 
 
 class Legend(BaseModel):
-    """Legend/metadata for a time series."""
-
     # Optional fields
     supply_zone_id: Optional[str] = None
     location_name: Optional[str] = None
@@ -109,8 +98,6 @@ class Legend(BaseModel):
 
 
 class TimeSerie(BaseModel):
-    """A collection of data points with optional legend."""
-
     # Mandatory fields
     series: list[Series]
 
@@ -119,8 +106,6 @@ class TimeSerie(BaseModel):
 
 
 class HistoricalData(BaseModel):
-    """Complete historical consumption data response."""
-
     # Mandatory fields
     hit: Hit
     timeseries: dict[str, TimeSerie]
@@ -131,28 +116,3 @@ class HistoricalData(BaseModel):
     timezone: Optional[str] = None
     min_aggregation_seconds: Optional[int] = None
     annotations: Optional[list[str]] = None
-
-
-class AtAGlanceData(BaseModel):
-    """Model for at_a_glance endpoint response.
-
-    Provides quick summary statistics: this_week, last_week,
-    and average daily usage.
-    """
-
-    this_week: Optional[float] = None
-    last_week: Optional[float] = None
-    average: Optional[float] = None
-    units: Optional[EOWUnits] = None
-
-
-__all__ = [
-    "Register0EncoderItem",
-    "Hit",
-    "Params",
-    "Series",
-    "Legend",
-    "TimeSerie",
-    "HistoricalData",
-    "AtAGlanceData",
-]

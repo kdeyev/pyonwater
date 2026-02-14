@@ -1,10 +1,7 @@
-"""Tests for pyonwater meter."""  # nosec: B101, B106
+"""Tests for pyonwater meter."""
 
-from typing import Any
 
 from aiohttp import web
-import pytest
-
 from conftest import (
     build_client,
     build_data_endpoint,
@@ -14,19 +11,21 @@ from conftest import (
     mock_read_meter_endpoint,
     mock_signin_endpoint,
 )
+import pytest
+
 from pyonwater import EOWUnits, EyeOnWaterUnitError, NativeUnits
 
-# Mock for historical data request, but no actual data
+"""Mock for historical data request, but no actual data"""
 mock_historical_data_nodata_endpoint = build_data_endpoint(
     "historical_data_mock_anonymized_nodata",
 )
 
-# Mock for historical data request, but newer data
+"""Mock for historical data request, but newer data"""
 mock_historical_data_newer_data_endpoint = build_data_endpoint(
     "historical_data_mock_anonymized_newer_data",
 )
 
-# Mock for historical data request, but newer and more data
+"""Mock for historical data request, but newer and more data"""
 mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
     "historical_data_mock_anonymized_newer_data_moredata",
 )
@@ -49,10 +48,9 @@ mock_historical_data_newerdata_moredata_endpoint = build_data_endpoint(
         (EOWUnits.UNIT_LITER_LC, NativeUnits.CM, 0.001),
     ],
 )
-@pytest.mark.asyncio()
 async def test_meter_info(
-    aiohttp_client: Any, units: Any, expected_native_unit: Any, expected_factor: Any
-) -> None:
+    aiohttp_client, loop, units, expected_native_unit, expected_factor
+):
     """Test meter returns expected units."""
     app = web.Application()
 
@@ -68,26 +66,23 @@ async def test_meter_info(
 
     websession = await aiohttp_client(app)
 
-    _, client = await build_client(websession)
+    account, client = await build_client(websession)
     meter = await build_meter(client)
 
     # Read meter info
-    assert meter.reading.reading == 42.0 * expected_factor  # nosec: B101
-    assert meter.reading.unit == expected_native_unit  # nosec: B101
-    assert meter.meter_info is not None  # nosec: B101
-    assert meter.native_unit_of_measurement == expected_native_unit  # nosec: B101
+    assert meter.reading.reading == 42.0 * expected_factor
+    assert meter.reading.unit == expected_native_unit
+    assert meter.meter_info is not None
+    assert meter.native_unit_of_measurement == expected_native_unit
 
     # Read meter with some historical
     await meter.read_historical_data(client=client, days_to_load=1)
-    assert len(meter.last_historical_data) == 1  # nosec: B101
-    assert (
-        meter.last_historical_data[0].reading == 42.0 * expected_factor
-    )  # nosec: B101
-    assert meter.last_historical_data[0].unit == expected_native_unit  # nosec: B101
+    assert len(meter.last_historical_data) == 1
+    assert meter.last_historical_data[0].reading == 42.0 * expected_factor
+    assert meter.last_historical_data[0].unit == expected_native_unit
 
 
-@pytest.mark.asyncio()
-async def test_meter_historical_data_no_data(aiohttp_client: Any) -> None:
+async def test_meter_historical_data_no_data(aiohttp_client, loop):
     """Basic meter test."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -101,13 +96,13 @@ async def test_meter_historical_data_no_data(aiohttp_client: Any) -> None:
     )
     websession = await aiohttp_client(app)
 
-    _, client = await build_client(websession)
+    account, client = await build_client(websession)
     meter = await build_meter(client)
 
     # Read historical data with no data
     data = await meter.read_historical_data(client=client, days_to_load=1)
-    assert data != []  # nosec: B101
-    assert meter.last_historical_data != []  # nosec: B101
+    assert data != []
+    assert meter.last_historical_data != []
 
     # New meter reading in CM
     app = web.Application()
@@ -122,22 +117,21 @@ async def test_meter_historical_data_no_data(aiohttp_client: Any) -> None:
     )
     websession = await aiohttp_client(app)
 
-    _, client = await build_client(websession)
+    account, client = await build_client(websession)
     meter = await build_meter(client)
     meter.last_historical_data = data  # dirty hack for restoring historical data
 
     # Read meter with some historical
     data = await meter.read_historical_data(client=client, days_to_load=1)
-    assert data == []  # nosec: B101
+    assert data == []
 
     # Read historical data with no data
     data = await meter.read_historical_data(client=client, days_to_load=1)
-    assert data == []  # nosec: B101
-    assert meter.last_historical_data != []  # nosec: B101
+    assert data == []
+    assert meter.last_historical_data != []
 
 
-@pytest.mark.asyncio()
-async def test_meter_info_mismatch(aiohttp_client: Any) -> None:
+async def test_meter_info_mismatch(aiohttp_client, loop):
     """Test meter handling units mismatch."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -151,7 +145,7 @@ async def test_meter_info_mismatch(aiohttp_client: Any) -> None:
     )
     websession = await aiohttp_client(app)
 
-    _, client = await build_client(websession)
+    account, client = await build_client(websession)
     meter = await build_meter(client)
 
     with pytest.raises(EyeOnWaterUnitError):
@@ -166,8 +160,8 @@ async def test_meter_info_mismatch(aiohttp_client: Any) -> None:
     )
     websession = await aiohttp_client(app)
 
-    _, client = await build_client(websession)
+    account, client = await build_client(websession)
     await meter.read_meter_info(client)
 
     with pytest.raises(EyeOnWaterUnitError):
-        assert meter.reading  # nosec: B101
+        assert meter.reading
