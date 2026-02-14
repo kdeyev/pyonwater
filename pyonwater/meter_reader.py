@@ -1,27 +1,25 @@
 """EyeOnWater API integration."""
-
 from __future__ import annotations
 
 import asyncio
 import datetime
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 import pytz
 
 from .exceptions import EyeOnWaterAPIError, EyeOnWaterResponseIsEmpty
 from .models import DataPoint, HistoricalData, MeterInfo
-from .models.eow_historical_models import AtAGlanceData
-from .models.units import AggregationLevel, RequestUnits
 
 if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
 
+    pass
+
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
 CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
-AT_A_GLANCE_ENDPOINT = "/api/2/residential/at_a_glance"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,10 +42,10 @@ class MeterReader:
         meters = data["elastic_results"]["hits"]["hits"]
         if len(meters) > 1:
             msg = "More than one meter reading found"
-            raise EyeOnWaterAPIError(msg)
+            raise Exception(msg)
 
         try:
-            meter_info = MeterInfo.parse_obj(meters[0]["_source"])
+            meter_info = MeterInfo.model_validate(meters[0]["_source"])
         except ValidationError as e:
             msg = f"Unexpected EOW response {e} with payload {meters[0]['_source']}"
             raise EyeOnWaterAPIError(msg) from e
@@ -55,21 +53,9 @@ class MeterReader:
         return meter_info
 
     async def read_historical_data(
-        self,
-        client: Client,
-        days_to_load: int,
-        aggregation: AggregationLevel = AggregationLevel.HOURLY,
-        units: RequestUnits | None = None,
+        self, client: Client, days_to_load: int
     ) -> list[DataPoint]:
-        """Retrieve historical data for today and past N days.
-
-        Args:
-            client: The authenticated API client.
-            days_to_load: Number of days of history to retrieve.
-            aggregation: Granularity level for data (default: HOURLY).
-                         Use QUARTER_HOURLY for 15-minute resolution.
-            units: Preferred units for response data (optional).
-        """
+        """Retrieve historical data for today and past N days."""
         today = datetime.datetime.now().replace(
             hour=0,
             minute=0,
@@ -81,25 +67,18 @@ class MeterReader:
         date_list.reverse()
 
         _LOGGER.info(
-            "requesting historical statistics for %s on %s",
-            self.meter_uuid,
-            date_list,
+            f"requesting historical statistics for {self.meter_uuid} on {date_list}",
         )
 
-        statistics: list[DataPoint] = []
+        statistics = []
 
         for date in date_list:
             _LOGGER.info(
-                "requesting historical statistics for %s on %s",
-                self.meter_uuid,
-                date,
+                f"requesting historical statistics for {self.meter_uuid} on {date}",
             )
             try:
                 statistics += await self.read_historical_data_one_day(
-                    client=client,
-                    date=date,
-                    aggregation=aggregation,
-                    units=units,
+                    client=client, date=date
                 )
             except EyeOnWaterResponseIsEmpty:
                 continue
@@ -113,7 +92,7 @@ class MeterReader:
         timezone = pytz.timezone(timezones[0])
 
         ts = data.timeseries[key].series
-        statistics: list[DataPoint] = []
+        statistics = []
         for d in ts:
             if d.bill_read is None or d.display_unit is None:
                 continue
@@ -134,35 +113,22 @@ class MeterReader:
         self,
         client: Client,
         date: datetime.datetime,
-        aggregation: AggregationLevel = AggregationLevel.HOURLY,
-        units: RequestUnits | None = None,
     ) -> list[DataPoint]:
-        """Retrieve historical water readings for a requested day.
-
-        Args:
-            client: The authenticated API client.
-            date: The date to retrieve data for.
-            aggregation: Granularity level (default: HOURLY).
-                         Use QUARTER_HOURLY for 15-minute resolution.
-            units: Preferred units for response (e.g., RequestUnits.GALLONS).
-        """
-        params: dict[str, str | bool] = {
-            "source": "barnacle",
-            "aggregate": aggregation.value,
-            "combine": "true",
-            "perspective": "billing",
-            "display_minutes": True,
-            "display_hours": True,
-            "display_days": True,
-            "date": date.strftime("%m/%d/%Y"),
-            "furthest_zoom": "hr",
-            "display_weeks": True,
-        }
-        if units is not None:
-            params["units"] = units.value
-
-        query: dict[str, object] = {
-            "params": params,
+        """Retrieve the historical hourly water readings for a requested day."""
+        query = {
+            "params": {
+                "source": "barnacle",
+                "aggregate": "hourly",
+                "units": "cm",  # This parameter seems to be ignored and does not affect the output values :-)
+                "combine": "true",
+                "perspective": "billing",
+                "display_minutes": True,
+                "display_hours": True,
+                "display_days": True,
+                "date": date.strftime("%m/%d/%Y"),
+                "furthest_zoom": "hr",
+                "display_weeks": True,
+            },
             "query": {"query": {"terms": {"meter.meter_uuid": [self.meter_uuid]}}},
         }
         raw_data = await client.request(
@@ -171,7 +137,7 @@ class MeterReader:
             json=query,
         )
         try:
-            data = HistoricalData.parse_raw(raw_data)
+            data = HistoricalData.model_validate_json(raw_data)
         except ValidationError as e:
             msg = f"Unexpected EOW response {e}"
             raise EyeOnWaterAPIError(msg) from e
@@ -183,43 +149,3 @@ class MeterReader:
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.convert, data, key)
-
-    async def read_at_a_glance(
-        self,
-        client: Client,
-        units: RequestUnits | None = None,
-    ) -> AtAGlanceData:
-        """Retrieve quick summary statistics from at_a_glance endpoint.
-
-        Returns usage summaries: this_week, last_week, and average daily usage.
-
-        Args:
-            client: The authenticated API client.
-            units: Preferred units for response (optional).
-
-        Returns:
-            AtAGlanceData with this_week, last_week, and average values.
-        """
-        params: dict[str, str] = {
-            "source": "barnacle",
-            "perspective": "billing",
-        }
-        if units is not None:
-            params["units"] = units.value
-
-        query: dict[str, Any] = {
-            "params": params,
-            "query": {"query": {"terms": {"meter.meter_uuid": [self.meter_uuid]}}},
-        }
-        raw_data = await client.request(
-            path=AT_A_GLANCE_ENDPOINT,
-            method="post",
-            json=query,
-        )
-        try:
-            data = AtAGlanceData.parse_raw(raw_data)
-        except ValidationError as e:
-            msg = f"Unexpected at_a_glance response {e}"
-            raise EyeOnWaterAPIError(msg) from e
-
-        return data

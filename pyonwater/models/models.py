@@ -16,6 +16,3 @@ class DataPoint:
     dt: datetime
     reading: float
     unit: str
-
-
-__all__ = ["DataPoint"]
