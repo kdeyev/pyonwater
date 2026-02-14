@@ -58,7 +58,7 @@ from .models import (
 from .series import enforce_monotonic_total, filter_points_after
 from .units import convert_to_native, deduce_native_units
 
-__all__ = (
+__all__ = [
     "Account",
     "AccountInfo",
     "ActiveFlags",
@@ -112,4 +112,4 @@ __all__ = (
     "deduce_native_units",
     "enforce_monotonic_total",
     "filter_points_after",
-)
+]

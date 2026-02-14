@@ -109,20 +109,17 @@ def change_units_decorator(
 
 
 def add_error_decorator(
-    endpoint: Callable[[web.Request], Awaitable[web.Response]],
-    code: int,
-    *,
-    failures: int = 1,
+    endpoint: Callable[[web.Request], Awaitable[web.Response]], code: int
 ) -> Callable[[web.Request], Awaitable[web.Response]]:
     """Decorator for adding one error to another endpoint.
 
-    The call will fail `failures` times, then succeed.
+    The second call will be successful.
     """
     counter = 0
 
     async def mock(_request: web.Request) -> web.Response:
         nonlocal counter
-        if counter < failures:
+        if counter == 0:
             counter += 1
             return web.Response(status=code)
         return await endpoint(_request)
@@ -134,29 +131,9 @@ mock_read_meter_endpoint: Callable[[web.Request], Awaitable[web.Response]] = (
     build_data_endpoint("read_meter_mock_anonymized")
 )
 
-
-async def mock_historical_data_endpoint(request: web.Request) -> web.Response:
-    """Mock consumption endpoint that validates required parameters like real API.
-
-    The real EyeOnWater API returns empty responses when required parameters
-    are missing. This mock mimics that behavior to catch contract violations.
-    """
-    payload = await request.json()
-    params = payload.get("params", {})
-
-    # Validate required parameters - real API returns empty response if missing
-    required_params = ["source", "aggregate", "perspective", "date", "units"]
-    for param in required_params:
-        if param not in params:
-            # Return empty string like real API does when params are invalid
-            return web.Response(text="")
-
-    # Valid request - return mock data
-    with open(
-        "tests/mock_data/historical_data_mock_anonymized.json", encoding="utf-8"
-    ) as f:
-        return web.Response(text=f.read())
-
+mock_historical_data_endpoint: Callable[[web.Request], Awaitable[web.Response]] = (
+    build_data_endpoint("historical_data_mock_anonymized")
+)
 
 mock_historical_data_no_data_endpoint: Callable[
     [web.Request], Awaitable[web.Response]

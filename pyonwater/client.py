@@ -7,13 +7,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
-from aiohttp import ClientTimeout
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential_jitter,
-)
+from tenacity import retry, retry_if_exception_type
 
 from .exceptions import (
     EyeOnWaterAuthError,
@@ -29,8 +23,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 TOKEN_EXPIRATION = datetime.timedelta(minutes=15)
 AUTH_ENDPOINT = "account/signin"
-MAX_LOG_PAYLOAD = 1000
-DEFAULT_TIMEOUT = ClientTimeout(total=30, connect=10, sock_read=20)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,13 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 class Client:
     """Class represents client object."""
 
-    def __init__(
-        self,
-        websession: ClientSession,
-        account: Account,
-        *,
-        timeout: ClientTimeout | None = None,
-    ) -> None:
+    def __init__(self, websession: ClientSession, account: Account) -> None:
         """Initialize the client."""
         self.base_url = (
             "https://" + account.eow_hostname + "/" if account.eow_hostname else ""
@@ -56,24 +42,11 @@ class Client:
         self.authenticated = False
         self.token_expiration = datetime.datetime.now()
         self.user_agent = None
-        self.timeout = timeout or DEFAULT_TIMEOUT
-
-    def _truncate_payload(self, payload: str) -> str:
-        if len(payload) <= MAX_LOG_PAYLOAD:
-            return payload
-        return f"{payload[:MAX_LOG_PAYLOAD]}..."
 
     def _update_token_expiration(self) -> None:
         self.token_expiration = datetime.datetime.now() + TOKEN_EXPIRATION
 
-    @retry(
-        retry=retry_if_exception_type(
-            (EyeOnWaterAuthExpired, EyeOnWaterRateLimitError),
-        ),
-        wait=wait_exponential_jitter(initial=1, max=20),
-        stop=stop_after_attempt(3),
-        reraise=True,
-    )
+    @retry(retry=retry_if_exception_type(EyeOnWaterAuthExpired))  # type: ignore
     async def request(
         self,
         path: str,
@@ -86,11 +59,10 @@ class Client:
             method,
             f"{self.base_url}{path}",
             cookies=self.cookies,
-            timeout=self.timeout,
             **kwargs,
         )
         if resp.status == 403:
-            _LOGGER.warning("Reached ratelimit")
+            _LOGGER.error("Reached ratelimit")
             msg = "Reached ratelimit"
             raise EyeOnWaterRateLimitError(msg)
         elif resp.status == 401:
@@ -105,11 +77,7 @@ class Client:
         data: str = await resp.text()
 
         if resp.status != 200:
-            _LOGGER.error(
-                "Request failed: %s %s",
-                resp.status,
-                self._truncate_payload(data),
-            )
+            _LOGGER.error("Request failed: %s %s", resp.status, data)
             msg = f"Request failed: {resp.status} {data}"
             raise EyeOnWaterException(msg)
 
@@ -127,7 +95,6 @@ class Client:
                     "username": self.username,
                     "password": self.password,
                 },
-                timeout=self.timeout,
             )
 
             # if "dashboard" not in str(resp.url):

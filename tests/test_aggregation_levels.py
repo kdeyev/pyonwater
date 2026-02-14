@@ -33,17 +33,18 @@ TEST_DATE = (datetime.now() - timedelta(days=1)).replace(
         AggregationLevel.YEARLY,
     ],
 )
-@pytest.mark.asyncio()
 async def test_aggregation_levels(
     aiohttp_client: Any, aggregation: AggregationLevel
 ) -> None:
     """Test that all aggregation levels are supported."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post(
+        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
+    )
+    app.router.add_post(  # type: ignore
         "/api/2/residential/consumption",
-        build_consumption_endpoint_with_aggregation(aggregation.value),
+        build_consumption_endpoint_with_aggregation(aggregation.value),  # type: ignore
     )
 
     websession = await aiohttp_client(app)
@@ -74,15 +75,16 @@ async def test_aggregation_levels(
         RequestUnits.FLUID_BARRELS,
     ],
 )
-@pytest.mark.asyncio()
 async def test_request_units(aiohttp_client: Any, units: RequestUnits) -> None:
     """Test that all request units are supported."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post(
+        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
+    )
+    app.router.add_post(  # type: ignore
         "/api/2/residential/consumption",
-        build_consumption_endpoint_with_aggregation("hourly"),
+        build_consumption_endpoint_with_aggregation("hourly"),  # type: ignore
     )
 
     websession = await aiohttp_client(app)
@@ -98,15 +100,16 @@ async def test_request_units(aiohttp_client: Any, units: RequestUnits) -> None:
     assert isinstance(data, list)  # nosec: B101
 
 
-@pytest.mark.asyncio()
 async def test_default_aggregation(aiohttp_client: Any) -> None:
     """Test that default aggregation level (HOURLY) works without explicit param."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post(
+        "/api/2/residential/new_search", mock_read_meter_endpoint  # type: ignore
+    )
+    app.router.add_post(  # type: ignore
         "/api/2/residential/consumption",
-        build_consumption_endpoint_with_aggregation("hourly"),
+        build_consumption_endpoint_with_aggregation("hourly"),  # type: ignore
     )
 
     websession = await aiohttp_client(app)
