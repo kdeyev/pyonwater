@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      new_version: ${{ steps.check_tag.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,13 +30,13 @@ jobs:
         id: check_tag
         run: |
           if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "new_version=false" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "new_version=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create tag and release
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_tag.outputs.new_version == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -42,3 +44,27 @@ jobs:
           git tag "$VERSION"
           git push origin "$VERSION"
           gh release create "$VERSION" --title "$VERSION" --generate-notes
+
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+    if: needs.release.outputs.new_version == 'true'
+    environment: 'publish'
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: Build package
+        run: |
+          pip install poetry
+          poetry build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages_dir: dist/
