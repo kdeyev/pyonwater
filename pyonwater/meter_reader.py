@@ -23,6 +23,10 @@ SEARCH_ENDPOINT = "/api/2/residential/new_search"
 CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
 AT_A_GLANCE_ENDPOINT = "/api/2/residential/at_a_glance"
 
+# Default request units (cubic meters - "cm") for API calls
+# This is the standard unit when users don't specify a preference
+DEFAULT_REQUEST_UNITS = "cm"
+
 # EyeOnWater API Contract Requirements
 # =====================================
 # The consumption endpoint has strict requirements for request parameters.
@@ -97,8 +101,9 @@ class MeterReader:
         days_to_load: int,
         aggregation: AggregationLevel = AggregationLevel.HOURLY,
         units: RequestUnits | None = None,
+        end_date: datetime.datetime | None = None,
     ) -> list[DataPoint]:
-        """Retrieve historical data for today and past N days.
+        """Retrieve historical data for N days ending on specified date.
 
         Args:
             client: The authenticated API client.
@@ -106,6 +111,7 @@ class MeterReader:
             aggregation: Granularity level for data (default: HOURLY).
                          Use QUARTER_HOURLY for 15-minute resolution.
             units: Preferred units for response data (optional).
+            end_date: Optional end date (defaults to today if not provided).
 
         Raises:
             ValueError: If days_to_load is not positive.
@@ -114,20 +120,28 @@ class MeterReader:
             msg = f"days_to_load must be at least 1, got {days_to_load}"
             raise ValueError(msg)
 
-        today = datetime.datetime.now().replace(
+        # Use provided end_date or default to today
+        if end_date is None:
+            end_date = datetime.datetime.now()
+
+        # Normalize to midnight while preserving timezone
+        end_date = end_date.replace(
             hour=0,
             minute=0,
             second=0,
             microsecond=0,
+            tzinfo=end_date.tzinfo,
         )
 
-        date_list = [today - datetime.timedelta(days=x) for x in range(0, days_to_load)]
+        date_list: list[datetime.datetime] = [
+            end_date - datetime.timedelta(days=x) for x in range(0, days_to_load)
+        ]
         date_list.reverse()
 
         _LOGGER.debug(
             "requesting historical statistics for %s on %s",
             self.meter_uuid,
-            date_list,
+            [d.isoformat() for d in date_list],
         )
 
         statistics: list[DataPoint] = []
@@ -217,9 +231,7 @@ class MeterReader:
             "date": date.strftime("%m/%d/%Y"),
             "furthest_zoom": "hr",
             "display_weeks": True,
-            "units": (
-                units.value if units is not None else "cm"
-            ),  # Default to cm (cubic meters) if not specified
+            "units": (units.value if units is not None else DEFAULT_REQUEST_UNITS),
         }
 
         query: dict[str, object] = {
@@ -303,9 +315,7 @@ class MeterReader:
         params: dict[str, str] = {
             "source": "barnacle",
             "perspective": "billing",
-            "units": (
-                units.value if units is not None else "cm"
-            ),  # Default to cm for consistency
+            "units": (units.value if units is not None else DEFAULT_REQUEST_UNITS),
         }
 
         query: dict[str, Any] = {

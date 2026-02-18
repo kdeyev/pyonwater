@@ -20,8 +20,10 @@ from pyonwater import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER.setLevel(logging.DEBUG)
-_LOGGER.addHandler(logging.StreamHandler())
+# Note: Logging configuration should be handled by the application using this
+# library, not by the library itself. Configure logging in your main application
+# using logging.basicConfig() or a logging configuration file.
+# Example: logging.basicConfig(level=logging.DEBUG)
 
 
 async def main() -> None:

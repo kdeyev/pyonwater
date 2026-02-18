@@ -1,10 +1,12 @@
 """Tests for input validation in MeterReader class."""
 
+from datetime import datetime
 from unittest.mock import Mock
 
 import pytest
 
 from pyonwater.meter_reader import MeterReader
+from pyonwater.models.eow_historical_models import Series
 from pyonwater.models.units import AggregationLevel, RequestUnits
 
 
@@ -140,3 +142,75 @@ def test_units_defaults_to_cm_when_none() -> None:
     units_value = RequestUnits.GALLONS
     result = units_value.value
     assert result == "gallons"
+
+
+# ============================================================================
+# Series Date Parsing Tests
+# ============================================================================
+
+
+def test_series_date_parsing_full_datetime() -> None:
+    """Test Series can parse full datetime format (daily/weekly aggregation)."""
+    series = Series(
+        date=datetime(2026, 2, 10, 0, 0, 0),
+        meter_uuid=5215777958325016766,
+        value=166.10,
+    )
+    assert series.date == datetime(2026, 2, 10, 0, 0, 0)
+
+
+def test_series_date_parsing_date_only() -> None:
+    """Test Series can parse date-only format (YYYY-MM-DD)."""
+    series = Series.model_validate(
+        {"date": "2026-02-10", "meter_uuid": 5215777958325016766, "value": 166.10}
+    )
+    assert series.date == datetime(2026, 2, 10, 0, 0, 0)
+
+
+def test_series_date_parsing_month_only() -> None:
+    """Test Series can parse month-only format (monthly aggregation).
+
+    The API returns dates in YYYY-MM format for monthly aggregations.
+    This is the critical format that was failing before the fix.
+    """
+    series = Series.model_validate(
+        {"date": "2026-02", "meter_uuid": 5215777958325016766, "value": 7.73056801}
+    )
+    # Month-only format should parse to the first day of that month
+    assert series.date == datetime(2026, 2, 1, 0, 0, 0)
+
+
+def test_series_date_parsing_year_only() -> None:
+    """Test Series can parse year-only format (yearly aggregation)."""
+    series = Series.model_validate(
+        {"date": "2026", "meter_uuid": 5215777958325016766, "value": 1000.0}
+    )
+    # Year-only format should parse to January 1st of that year
+    assert series.date == datetime(2026, 1, 1, 0, 0, 0)
+
+
+def test_series_date_parsing_datetime_object() -> None:
+    """Test Series can accept datetime objects directly."""
+    dt = datetime(2026, 2, 10, 12, 30, 45)
+    series = Series(
+        date=dt,
+        meter_uuid=5215777958325016766,
+        value=166.10,
+    )
+    assert series.date == dt
+
+
+def test_series_date_parsing_invalid_format() -> None:
+    """Test Series raises ValueError for invalid date formats."""
+    with pytest.raises(ValueError, match="Unable to parse date"):
+        Series.model_validate(
+            {"date": "not-a-date", "meter_uuid": 5215777958325016766, "value": 166.10}
+        )
+
+
+def test_series_date_parsing_invalid_type() -> None:
+    """Test Series raises ValueError for non-string, non-datetime types."""
+    with pytest.raises(ValueError, match="Date must be a string or datetime"):
+        Series.model_validate(
+            {"date": 12345, "meter_uuid": 5215777958325016766, "value": 166.10}
+        )
