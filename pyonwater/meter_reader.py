@@ -255,9 +255,18 @@ class MeterReader:
                 raw_data[:1000] if raw_data else "None",
             )
 
-        # Handle empty responses from API
-        if not raw_data or not raw_data.strip():
-            msg = "Empty response from Eye on Water API"
+        # Handle empty responses from API.
+        # The API returns several forms of "no data for this date":
+        #   - truly empty body: '' or whitespace-only
+        #   - JSON-encoded empty string: '""'
+        #   - JSON null: 'null'
+        # All three must be caught here so they raise EyeOnWaterResponseIsEmpty
+        # (which the daily loop silently skips) rather than reaching Pydantic and
+        # propagating as a coordinator-level ERROR.
+        stripped = raw_data.strip() if raw_data else ""
+        if not stripped or stripped in ('""', "null"):
+            date_str = date.strftime("%Y-%m-%d")
+            msg = f"Empty/null response from Eye on Water API for {date_str}"
             raise EyeOnWaterResponseIsEmpty(msg)
 
         _LOGGER.debug("Received %d bytes from API for date %s", len(raw_data), date)
@@ -265,6 +274,22 @@ class MeterReader:
         try:
             data = HistoricalData.model_validate_json(raw_data)
         except ValidationError as e:
+            # Belt-and-suspenders: if the JSON parsed to an empty/null value
+            # (input_value='' or input_value=None with type=json_invalid), the
+            # API effectively returned no data for this date.  Treat it the same
+            # as an empty body so the daily loop skips it without an ERROR log.
+            errors = e.errors()
+            if (
+                errors
+                and errors[0].get("type") == "json_invalid"
+                and not errors[0].get("input", "SENTINEL")
+            ):
+                msg = (
+                    f"Empty/null JSON from Eye on Water API for "
+                    f"{date.strftime('%Y-%m-%d')} (json_invalid with empty input)"
+                )
+                _LOGGER.debug(msg)
+                raise EyeOnWaterResponseIsEmpty(msg) from e
             _LOGGER.error("Pydantic validation error: %s", e)
             _LOGGER.error("Validation errors detail: %s", e.errors())
             if _LOGGER.isEnabledFor(logging.DEBUG):
@@ -279,7 +304,7 @@ class MeterReader:
         if key not in data.timeseries:
             available_keys = list(data.timeseries.keys())
             msg = f"Meter {key} not found in timeseries keys: {available_keys}"
-            _LOGGER.error(msg)
+            _LOGGER.debug(msg)
             raise EyeOnWaterResponseIsEmpty(msg)
 
         _LOGGER.debug(
