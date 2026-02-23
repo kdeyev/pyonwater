@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from typing import TYPE_CHECKING
 
@@ -91,10 +91,8 @@ class Meter:
             self.last_historical_data = historical_data
         elif historical_data and self.last_historical_data:
             if historical_data[-1].dt > self.last_historical_data[-1].dt:
-                # Take newer data
                 self.last_historical_data = historical_data
             elif historical_data[-1].reading == self.last_historical_data[-1].reading:
-                # If it's the same date - take more data
                 if len(historical_data) > len(self.last_historical_data):
                     self.last_historical_data = historical_data
 
@@ -130,17 +128,59 @@ class Meter:
             dt=dp.dt, reading=native_reading, unit=self._native_unit_of_measurement
         )
 
+    @property
+    def last_read_time(self) -> datetime | None:
+        """Return the time of the most recent meter read.
+
+        Sourced from ``meter.last_read_time`` in the new_search response.
+        Returns ``None`` when meter data has not been fetched yet or the field
+        is absent in the API response.
+        """
+        if self._meter_info and self._meter_info.meter:
+            return self._meter_info.meter.last_read_time
+        return None
+
+    @property
+    def communication_seconds(self) -> int | None:
+        """Return the meter's data transmission interval in seconds.
+
+        Typical values: 86400 (daily), 3600 (hourly), 900 (15-minute).
+        Sourced from ``meter.communication_seconds`` in the new_search response.
+        Returns ``None`` when meter data has not been fetched or the field is
+        absent.
+        """
+        if self._meter_info and self._meter_info.meter:
+            return self._meter_info.meter.communication_seconds
+        return None
+
+    @property
+    def next_update(self) -> datetime | None:
+        """Return the estimated time of the next meter data update.
+
+        Computed as ``last_read_time + communication_seconds``.  This matches
+        the "Next Update" value shown on the EyeOnWater dashboard (within a few
+        minutes, as the exact transmission schedule can vary).
+
+        Returns ``None`` when either ``last_read_time`` or
+        ``communication_seconds`` is unavailable.
+        """
+        lrt = self.last_read_time
+        cs = self.communication_seconds
+        if lrt is None or cs is None:
+            return None
+        return lrt + timedelta(seconds=cs)
+
     async def read_at_a_glance(
         self,
         client: Client,
-        units: RequestUnits | None = None,
     ) -> AtAGlanceData:
         """Retrieve quick summary statistics.
 
-        Returns this_week, last_week, and average daily usage.
+        Returns per-day usage for this week and last week, plus a rolling
+        daily average.  Units and aggregation are determined server-side;
+        use ``read_historical_data`` for unit/aggregation control.
 
         Args:
             client: The authenticated API client.
-            units: Preferred units for response (optional).
         """
-        return await self._reader.read_at_a_glance(client=client, units=units)
+        return await self._reader.read_at_a_glance(client=client)

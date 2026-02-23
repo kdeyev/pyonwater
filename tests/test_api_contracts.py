@@ -12,7 +12,7 @@ import pytest
 
 from conftest import (
     build_client,
-    mock_validating_historical_data_endpoint,
+    mock_historical_data_endpoint,
     mock_read_meter_endpoint,
     mock_signin_endpoint,
 )
@@ -95,7 +95,7 @@ async def test_consumption_validates_required_params(aiohttp_client: Any) -> Non
     )
     # Use the improved validating mock that checks for required params
     app.router.add_post(
-        "/api/2/residential/consumption", mock_validating_historical_data_endpoint  # type: ignore
+        "/api/2/residential/consumption", mock_historical_data_endpoint  # type: ignore
     )
 
     websession = await aiohttp_client(app)

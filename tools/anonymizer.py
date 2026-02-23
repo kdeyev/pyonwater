@@ -1,4 +1,5 @@
 """Simple JSON anonymization tool."""
+
 import datetime
 import json
 import os
@@ -30,14 +31,16 @@ def is_unit(string: str) -> bool:
 def traverse(data: Any) -> Any:  # noqa: C901
     """Anonymize an entity."""
     if isinstance(data, dict):
-        for k in data:
-            data[k] = traverse(data[k])
-        return data
-    elif isinstance(data, list):
-        for i in range(len(data)):
-            data[i] = traverse(data[i])
-        return data
-    elif isinstance(data, bool):
+        d: dict[str, Any] = data  # type: ignore[assignment]
+        for k in d:
+            d[k] = traverse(d[k])
+        return d
+    if isinstance(data, list):
+        lst: list[Any] = data  # type: ignore[assignment]
+        for i, item in enumerate(lst):
+            lst[i] = traverse(item)
+        return lst
+    if isinstance(data, bool):
         return data
     elif isinstance(data, int):
         return int("1" * len(str(data)))
@@ -66,13 +69,13 @@ def main(argv: Any) -> None:
     input_path = argv[1]
 
     print("Input", input_path)
-    with open(input_path) as f:
+    with open(input_path, encoding="utf-8") as f:
         data = json.load(f)
         data = traverse(data)
         filename, file_extension = os.path.splitext(input_path)
         output_filename = f"{filename}_anonymized{file_extension}"
 
-        with open(output_filename, "w") as f:
+        with open(output_filename, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=True)
 
         print("Anonymized", output_filename, "created")

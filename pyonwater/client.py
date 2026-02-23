@@ -99,7 +99,6 @@ class Client:
             await self.authenticate()
             raise EyeOnWaterAuthExpired
 
-        # Since API call did not return a 400 code, update the token_expiration.
         self._update_token_expiration()
 
         data: str = await resp.text()
@@ -129,8 +128,6 @@ class Client:
                 },
                 timeout=self.timeout,
             )
-
-            # if "dashboard" not in str(resp.url):
 
             if resp.status == 400:
                 msg = f"Username or password was not accepted by {self.base_url}"

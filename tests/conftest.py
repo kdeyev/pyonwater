@@ -212,12 +212,33 @@ def build_consumption_endpoint_with_aggregation(
     return build_data_endpoint("historical_data_mock_anonymized")
 
 
-def build_at_a_glance_endpoint() -> Callable[[web.Request], Awaitable[web.Response]]:
+def build_at_a_glance_endpoint(
+    *, validate_body: bool = False
+) -> Callable[[web.Request], Awaitable[web.Response]]:
     """Build an at_a_glance endpoint mock.
 
+    Args:
+        validate_body: When True, validates that the request uses the correct
+            ``{"meter_uuid": "..."}`` body format rather than the old
+            params/query wrapper.  Returns 400 on contract violation.
+
     Returns:
-        A mock endpoint that returns at_a_glance data.
+        A mock endpoint that returns real-shaped at_a_glance data.
     """
-    # For now, use the historical data as the base
-    # In a real scenario, this would have specific at_a_glance mock data
-    return build_data_endpoint("historical_data_mock_anonymized")
+
+    async def endpoint(request: web.Request) -> web.Response:
+        if validate_body:
+            try:
+                payload = await request.json()
+            except json.JSONDecodeError:
+                return web.Response(status=400, text="invalid JSON")
+            # Must be simple {"meter_uuid": "..."} — no nested params/query
+            if "meter_uuid" not in payload or "params" in payload or "query" in payload:
+                return web.Response(
+                    status=400,
+                    text=f"wrong request shape: {payload}",
+                )
+        with open("tests/mock_data/at_a_glance_mock.json", encoding="utf-8") as f:
+            return web.Response(text=f.read())
+
+    return endpoint

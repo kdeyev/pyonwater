@@ -10,7 +10,7 @@ This document catalogs all API endpoints, their parameters, validation requireme
 | `meter_id` | ✅ VALIDATED | Must be non-empty string | Lookup failures |
 | `days_to_load` | ✅ VALIDATED | Must be >= 1 | Invalid date ranges |
 | `units` (consumption) | ✅ VALIDATED | Always defaults to "cm" | Empty API responses |
-| `units` (at_a_glance) | ✅ VALIDATED | Always defaults to "cm" | Potentially empty responses |
+| `units` (at_a_glance) | N/A | Not sent — server-side only | N/A |
 | `aggregation` | ✅ TYPE-SAFE | AggregationLevel enum | Type errors (prevented by enum) |
 | `date` | ⚠️ PARTIAL | Valid datetime object | Format errors (prevented by strftime) |
 | `source` | ✅ HARDCODED | Always "barnacle" | Cannot be malformed |
@@ -142,35 +142,23 @@ This document catalogs all API endpoints, their parameters, validation requireme
 
 ```python
 {
-    "params": {
-        "source": str,       # REQUIRED - Must be "barnacle"
-        "perspective": str,  # REQUIRED - Must be "billing"
-        "units": str         # Optional (now defaulted for safety)
-    },
-    "query": {
-        "query": {
-            "terms": {
-                "meter.meter_uuid": [str]  # REQUIRED
-            }
-        }
-    }
+    "meter_uuid": str  # REQUIRED - The meter UUID
 }
 ```
 
+Units and aggregation are **not sent** — the server returns data in the meter's configured billing unit at fixed daily granularity. These are not caller-configurable on this endpoint. For unit/aggregation control use `read_historical_data` (consumption endpoint).
+
 #### At-a-Glance Parameters
 
-| Parameter | Value Type | Validation | Default | Can be Empty? | Notes |
-| --------- | ---------- | ---------- | ------- | ------------- | ----- |
-| `source` | `str` | Hardcoded | `"barnacle"` | ❌ No | Fixed value |
-| `perspective` | `str` | Hardcoded | `"billing"` | ❌ No | Fixed value |
-| `units` | `str` | Enum | `"cm"` | ⚠️ Unknown | Now defaulted for consistency |
-| `meter.meter_uuid` | `list[str]` | Non-empty | - | ❌ No | Must be valid UUID |
+| Parameter | Value Type | Validation | Can be Empty? | Notes |
+| --------- | ---------- | ---------- | ------------- | ----- |
+| `meter_uuid` | `str` | Non-empty | ❌ No | Must be valid UUID |
 
 #### At-a-Glance Behavior
 
-- **Missing `units`**: Unknown if causes empty response (defaulted for safety)
-- **Missing `source`/`perspective`**: Likely empty response
 - **Invalid `meter_uuid`**: Returns error or invalid data
+- **Units**: Fixed to meter's configured billing unit (server-side)
+- **Aggregation**: Fixed to daily (server-side)
 
 ## Validation Strategy
 
@@ -182,7 +170,6 @@ This document catalogs all API endpoints, their parameters, validation requireme
 
 2. **Default Values**
    - `units`: Always defaults to `"cm"` in consumption API ✅
-   - `units`: Now defaults to `"cm"` in at_a_glance API ✅
    - `aggregation`: Defaults to `AggregationLevel.HOURLY` ✅
 
 3. **Input Validation**
@@ -242,7 +229,7 @@ This document catalogs all API endpoints, their parameters, validation requireme
 
 ### Critical Rules
 
-1. ✅ **ALWAYS include `units` parameter** (consumption & at_a_glance)
+1. ✅ **ALWAYS include `units` parameter** (consumption only)
 2. ✅ **ALWAYS validate meter_uuid is non-empty**
 3. ✅ **ALWAYS validate meter_id is non-empty**
 4. ✅ **ALWAYS validate days_to_load >= 1**
@@ -268,11 +255,9 @@ This document catalogs all API endpoints, their parameters, validation requireme
     "furthest_zoom": "hr",                  # Fixed
 }
 
-# At-a-Glance API
+# At-a-Glance API - sends ONLY meter_uuid; server determines units/aggregation
 {
-    "source": "barnacle",                   # Fixed
-    "perspective": "billing",               # Fixed
-    "units": units.value or "cm",          # Enum with default (for safety)
+    "meter_uuid": self.meter_uuid,          # Required
 }
 
 # Search API

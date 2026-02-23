@@ -172,3 +172,55 @@ async def test_client_data_404(aiohttp_client: Any) -> None:
 
     with pytest.raises(EyeOnWaterException):
         await account.fetch_meters(client=client)
+
+
+@pytest.mark.asyncio()
+async def test_account_raises_when_meter_uuid_missing(aiohttp_client: Any) -> None:
+    """Verify EyeOnWaterException raised when dashboard HTML lacks meter_uuid."""
+
+    async def mock_bad_meters(_request: web.Request) -> web.Response:
+        data = (
+            '  AQ.Views.MeterPicker.meters = [{"display_address": "", '
+            '"meter_id": "456", "city": ""}];\n'
+        )
+        return web.Response(text=data)
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/dashboard/user", mock_bad_meters)
+    websession = await aiohttp_client(app)
+
+    account = Account(  # nosec: B106
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    with pytest.raises(EyeOnWaterException, match="Cannot find meter_uuid"):
+        await account.fetch_meter_readers(client=client)
+
+
+@pytest.mark.asyncio()
+async def test_client_truncates_long_error_payload(aiohttp_client: Any) -> None:
+    """Verify _truncate_payload runs when a non-200 response body exceeds 1000 chars."""
+
+    async def mock_long_error(_request: web.Request) -> web.Response:
+        return web.Response(status=503, text="X" * 1500)
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/dashboard/user", mock_long_error)
+    websession = await aiohttp_client(app)
+
+    account = Account(  # nosec: B106
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    with pytest.raises(EyeOnWaterException):  # nosec: B101
+        await account.fetch_meter_readers(client=client)
