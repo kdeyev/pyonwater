@@ -1,8 +1,7 @@
 """Tests for pyonwater meter."""
 
-from typing import Any
-
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from aiohttp import web
 from conftest import (
