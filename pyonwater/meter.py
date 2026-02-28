@@ -1,4 +1,5 @@
 """EyeOnWater API integration."""
+
 from __future__ import annotations
 
 import logging
@@ -12,8 +13,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
     from .meter_reader import MeterReader
     from .models import MeterInfo, Reading
-
-    pass
 
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
 CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
@@ -30,7 +29,7 @@ class Meter:
         self.last_historical_data: list[DataPoint] = []
 
         self._reading_data: Reading | None = None
-        self._meter_info = meter_info
+        self._meter_info: MeterInfo | None = meter_info
         self._reading_data = self._meter_info.reading
 
         self._native_unit_of_measurement = deduce_native_units(
