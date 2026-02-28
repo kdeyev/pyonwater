@@ -224,3 +224,61 @@ async def test_client_truncates_long_error_payload(aiohttp_client: Any) -> None:
 
     with pytest.raises(EyeOnWaterException):  # nosec: B101
         await account.fetch_meter_readers(client=client)
+
+
+async def test_client_new_search_nested_meter_payload(aiohttp_client, loop):
+    """Test parsing nested meter fields from new_search payload."""
+
+    async def mock_new_search_nested(request):
+        data = (
+            "{\"elastic_results\": {\"hits\": {\"hits\": ["
+            "{\"_id\": \"fallback_uuid\", \"_source\": {\"meter\": {\"meter_uuid\": \"nested_uuid\", \"meter_id\": 12345}}}"
+            "]}}}"
+        )
+        return web.Response(text=data)
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_new_search_nested)
+    websession = await aiohttp_client(app)
+
+    account = Account(
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    readers = await account.fetch_meter_readers(client=client)
+    assert len(readers) == 1
+    assert readers[0].meter_uuid == "nested_uuid"
+    assert readers[0].meter_id == "12345"
+
+
+async def test_client_falls_back_to_dashboard_when_new_search_empty(aiohttp_client, loop):
+    """Test dashboard fallback when new_search has no parseable meters."""
+
+    async def mock_new_search_empty(request):
+        return web.Response(text="{\"elastic_results\": {\"hits\": {\"hits\": []}}}")
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_new_search_empty)
+    app.router.add_get("/dashboard/user", mock_get_meters_endpoint)
+    websession = await aiohttp_client(app)
+
+    account = Account(
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    readers = await account.fetch_meter_readers(client=client)
+    assert len(readers) == 1
+    assert readers[0].meter_uuid == "123"
+    assert readers[0].meter_id == "456"
