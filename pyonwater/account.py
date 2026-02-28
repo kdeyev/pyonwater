@@ -65,7 +65,9 @@ class Account:
 
         return meters
 
-    async def _fetch_meter_readers_new_search(self, client: Client) -> list[MeterReader]:
+    async def _fetch_meter_readers_new_search(
+        self, client: Client
+    ) -> list[MeterReader]:
         """Fetch meters using the API endpoint used by modern EyeOnWater flows."""
         try:
             raw = await client.request(

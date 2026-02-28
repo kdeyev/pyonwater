@@ -3,14 +3,13 @@
 from typing import Any
 
 from aiohttp import web
-import pytest
-
 from conftest import (
     add_error_decorator,
     mock_get_meters_endpoint,
     mock_read_meter_endpoint,
     mock_signin_endpoint,
 )
+import pytest
 
 from pyonwater import (
     Account,
@@ -98,11 +97,14 @@ async def test_client_data_403(aiohttp_client: Any) -> None:
     """Test handling rate limit errors."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_get(
-        "/dashboard/user",
-        add_error_decorator(mock_get_meters_endpoint, 403, failures=3),
+
+    async def mock_rate_limit(_request: web.Request) -> web.Response:
+        return web.Response(status=403)
+
+    app.router.add_post(
+        "/api/2/residential/new_search",
+        mock_rate_limit,
     )
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
     account = Account(  # nosec: B106
@@ -152,11 +154,10 @@ async def test_client_data_404(aiohttp_client: Any) -> None:
     """Test handling 404 errors."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_get(
-        "/dashboard/user",
-        add_error_decorator(mock_get_meters_endpoint, 404),
+    app.router.add_post(
+        "/api/2/residential/new_search",
+        add_error_decorator(mock_read_meter_endpoint, 404),
     )
-    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
     account = Account(  # nosec: B106
@@ -185,8 +186,12 @@ async def test_account_raises_when_meter_uuid_missing(aiohttp_client: Any) -> No
         )
         return web.Response(text=data)
 
+    async def mock_new_search_empty(_request: web.Request) -> web.Response:
+        return web.Response(text='{"elastic_results": {"hits": {"hits": []}}}')
+
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_new_search_empty)
     app.router.add_get("/dashboard/user", mock_bad_meters)
     websession = await aiohttp_client(app)
 

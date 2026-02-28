@@ -16,7 +16,7 @@ import pytest
 from pyonwater import EyeOnWaterAPIError, MeterReader
 
 
-async def test_meter_reader(aiohttp_client, loop):
+async def test_meter_reader(aiohttp_client):
     """Basic meter reader test."""
     app = web.Application()
 
@@ -36,7 +36,7 @@ async def test_meter_reader(aiohttp_client, loop):
     await meter_reader.read_historical_data(client=client, days_to_load=1)
 
 
-async def test_meter_reader_nodata(aiohttp_client, loop):
+async def test_meter_reader_nodata(aiohttp_client):
     """Basic meter reader test."""
     app = web.Application()
 
@@ -59,7 +59,7 @@ async def test_meter_reader_nodata(aiohttp_client, loop):
     assert data == []
 
 
-async def test_meter_reader_wrong_units(aiohttp_client, loop):
+async def test_meter_reader_wrong_units(aiohttp_client):
     """Test reading date with unknown units."""
     app = web.Application()
 
@@ -79,7 +79,7 @@ async def test_meter_reader_wrong_units(aiohttp_client, loop):
         await meter_reader.read_meter_info(client=client)
 
 
-async def test_meter_reader_multiple_meters(aiohttp_client, loop):
+async def test_meter_reader_multiple_meters(aiohttp_client):
     """Test that multiple meter readings raises an exception."""
 
     def mock_multiple_meters_endpoint(request):
@@ -104,7 +104,7 @@ async def test_meter_reader_multiple_meters(aiohttp_client, loop):
         await meter_reader.read_meter_info(client=client)
 
 
-async def test_meter_reader_invalid_historical_response(aiohttp_client, loop):
+async def test_meter_reader_invalid_historical_response(aiohttp_client):
     """Test that invalid historical data response raises EyeOnWaterAPIError."""
 
     def mock_invalid_historical_endpoint(request):
