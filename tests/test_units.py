@@ -1,7 +1,7 @@
 """Tests for units conversion."""  # nosec: B101, B106
 
-from typing import Any, cast
 import math
+from typing import Any, cast
 
 import pytest
 

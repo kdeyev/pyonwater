@@ -3,8 +3,6 @@
 from typing import Any
 
 from aiohttp import web
-import pytest
-
 from conftest import (
     build_client,
     build_data_endpoint,
@@ -14,6 +12,8 @@ from conftest import (
     mock_read_meter_endpoint,
     mock_signin_endpoint,
 )
+import pytest
+
 from pyonwater import EOWUnits, EyeOnWaterException, EyeOnWaterUnitError, NativeUnits
 
 # Mock for historical data request, but no actual data

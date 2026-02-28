@@ -5,8 +5,6 @@ import logging
 from typing import Any
 
 from aiohttp import web
-import pytest
-
 from conftest import (
     build_client,
     change_units_decorator,
@@ -15,6 +13,8 @@ from conftest import (
     mock_read_meter_endpoint,
     mock_signin_endpoint,
 )
+import pytest
+
 from pyonwater import EyeOnWaterAPIError, MeterReader
 
 

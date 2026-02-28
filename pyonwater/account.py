@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 import urllib.parse
 
 from .exceptions import EyeOnWaterAPIError
@@ -66,7 +66,9 @@ class Account:
 
         return meters
 
-    async def _fetch_meter_readers_new_search(self, client: Client) -> list[MeterReader]:
+    async def _fetch_meter_readers_new_search(
+        self, client: Client
+    ) -> list[MeterReader]:
         """Fetch meters using the API endpoint used by modern EyeOnWater flows."""
         try:
             raw = await client.request(
@@ -74,33 +76,45 @@ class Account:
                 method="post",
                 json={"query": {"match_all": {}}},
             )
-            payload = json.loads(raw)
+            payload: dict[str, Any] = json.loads(raw)
         except (EyeOnWaterAPIError, json.JSONDecodeError, TypeError, ValueError):
             return []
 
-        hits = payload.get("elastic_results", {}).get("hits", {}).get("hits", [])
+        elastic: dict[str, Any] = cast(
+            dict[str, Any], payload.get("elastic_results") or {}
+        )
+        inner: dict[str, Any] = cast(dict[str, Any], elastic.get("hits") or {})
+        hits: list[dict[str, Any]] = cast(list[dict[str, Any]], inner.get("hits") or [])
         meters: list[MeterReader] = []
         for hit in hits:
-            source = hit.get("_source", {})
-            meter_obj = source.get("meter", {})
-            if not isinstance(meter_obj, dict):
-                meter_obj = {}
+            source: dict[str, Any] = hit.get("_source") or {}
+            meter_obj_raw = source.get("meter")
+            meter_obj: dict[str, Any] = (
+                cast(dict[str, Any], meter_obj_raw)
+                if isinstance(meter_obj_raw, dict)
+                else {}
+            )
 
-            meter_uuid = (
+            meter_uuid: str | None = (
                 meter_obj.get("meter_uuid")
                 or source.get(METER_UUID_FIELD)
                 or source.get("meter.meter_uuid")
                 or hit.get("_id")
-            )
-            meter_id = (
+            ) or None
+            meter_id: str | None = (
                 meter_obj.get("meter_id")
                 or source.get(METER_ID_FIELD)
                 or source.get("meter.meter_id")
-            )
+            ) or None
             if not meter_uuid or not meter_id:
                 continue
 
-            meters.append(MeterReader(meter_uuid=meter_uuid, meter_id=str(meter_id)))
+            meters.append(
+                MeterReader(
+                    meter_uuid=str(meter_uuid),
+                    meter_id=str(meter_id),
+                )
+            )
 
         return meters
 
