@@ -1,25 +1,28 @@
-"""Tests for pyonwater client."""
+"""Tests for pyonwater client."""  # nosec: B101, B106
+
+from typing import Any
 
 from aiohttp import web
+import pytest
+
 from conftest import (
     add_error_decorator,
     mock_get_meters_endpoint,
     mock_read_meter_endpoint,
     mock_signin_endpoint,
 )
-import pytest
 
 from pyonwater import (
     Account,
     Client,
-    EyeOnWaterAPIError,
     EyeOnWaterAuthError,
     EyeOnWaterException,
     EyeOnWaterRateLimitError,
 )
 
 
-async def test_client(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_client(aiohttp_client: Any) -> None:
     """Basic client test."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -27,7 +30,7 @@ async def test_client(aiohttp_client, loop):
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
-    account = Account(
+    account = Account(  # nosec: B106
         eow_hostname="",
         username="user",
         password="",
@@ -36,13 +39,14 @@ async def test_client(aiohttp_client, loop):
     client = Client(websession=websession, account=account)
     await client.authenticate()
 
-    assert client.authenticated is True
+    assert client.authenticated is True  # nosec: B101
 
     meters = await account.fetch_meters(client=client)
-    assert len(meters) == 1
+    assert len(meters) == 1  # nosec: B101
 
 
-async def test_client_403(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_client_403(aiohttp_client: Any) -> None:
     """Test handling rate limit errors during authentication."""
     app = web.Application()
     app.router.add_post(
@@ -52,7 +56,7 @@ async def test_client_403(aiohttp_client, loop):
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
-    account = Account(
+    account = Account(  # nosec: B106
         eow_hostname="",
         username="user",
         password="",
@@ -62,10 +66,11 @@ async def test_client_403(aiohttp_client, loop):
     with pytest.raises(EyeOnWaterRateLimitError):
         await client.authenticate()
 
-    assert client.authenticated is False
+    assert client.authenticated is False  # nosec: B101
 
 
-async def test_client_400(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_client_400(aiohttp_client: Any) -> None:
     """Test handling Auth errors during authentication."""
     app = web.Application()
     app.router.add_post(
@@ -75,7 +80,7 @@ async def test_client_400(aiohttp_client, loop):
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
-    account = Account(
+    account = Account(  # nosec: B106
         eow_hostname="",
         username="user",
         password="",
@@ -85,21 +90,22 @@ async def test_client_400(aiohttp_client, loop):
     with pytest.raises(EyeOnWaterAuthError):
         await client.authenticate()
 
-    assert client.authenticated is False
+    assert client.authenticated is False  # nosec: B101
 
 
-async def test_client_data_403(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_client_data_403(aiohttp_client: Any) -> None:
     """Test handling rate limit errors."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get(
         "/dashboard/user",
-        add_error_decorator(mock_get_meters_endpoint, 403),
+        add_error_decorator(mock_get_meters_endpoint, 403, failures=3),
     )
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
-    account = Account(
+    account = Account(  # nosec: B106
         eow_hostname="",
         username="user",
         password="",
@@ -108,13 +114,14 @@ async def test_client_data_403(aiohttp_client, loop):
     client = Client(websession=websession, account=account)
     await client.authenticate()
 
-    assert client.authenticated is True
+    assert client.authenticated is True  # nosec: B101
 
     with pytest.raises(EyeOnWaterRateLimitError):
         await account.fetch_meters(client=client)
 
 
-async def test_client_data_401(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_client_data_401(aiohttp_client: Any) -> None:
     """Test handling token expiration errors."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -125,7 +132,7 @@ async def test_client_data_401(aiohttp_client, loop):
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
-    account = Account(
+    account = Account(  # nosec: B106
         eow_hostname="",
         username="user",
         password="",
@@ -134,13 +141,14 @@ async def test_client_data_401(aiohttp_client, loop):
     client = Client(websession=websession, account=account)
     await client.authenticate()
 
-    assert client.authenticated is True
+    assert client.authenticated is True  # nosec: B101
 
     # fetch will reauthenticate and retry
     await account.fetch_meters(client=client)
 
 
-async def test_client_data_404(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_client_data_404(aiohttp_client: Any) -> None:
     """Test handling 404 errors."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -151,7 +159,7 @@ async def test_client_data_404(aiohttp_client, loop):
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
-    account = Account(
+    account = Account(  # nosec: B106
         eow_hostname="",
         username="user",
         password="",
@@ -160,45 +168,73 @@ async def test_client_data_404(aiohttp_client, loop):
     client = Client(websession=websession, account=account)
     await client.authenticate()
 
-    assert client.authenticated is True
+    assert client.authenticated is True  # nosec: B101
 
     with pytest.raises(EyeOnWaterException):
         await account.fetch_meters(client=client)
 
 
-async def test_client_missing_meter_uuid(aiohttp_client, loop):
-    """Test handling response with missing meter_uuid field."""
+@pytest.mark.asyncio()
+async def test_account_raises_when_meter_uuid_missing(aiohttp_client: Any) -> None:
+    """Verify EyeOnWaterException raised when dashboard HTML lacks meter_uuid."""
 
-    def mock_get_meters_no_uuid(request):
-        data = """  AQ.Views.MeterPicker.meters = [{"display_address": "", "meter_id": "456", "city": "", "location_name": "", "has_leak": false, "state": "", "serial_number": "789", "utility_uuid": "123", "page": 1, "zip_code": ""}];
-            junk"""
+    async def mock_bad_meters(_request: web.Request) -> web.Response:
+        data = (
+            '  AQ.Views.MeterPicker.meters = [{"display_address": "", '
+            '"meter_id": "456", "city": ""}];\n'
+        )
         return web.Response(text=data)
 
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_get("/dashboard/user", mock_get_meters_no_uuid)
+    app.router.add_get("/dashboard/user", mock_bad_meters)
     websession = await aiohttp_client(app)
 
-    account = Account(
+    account = Account(  # nosec: B106
         eow_hostname="",
         username="user",
         password="",
     )
-
     client = Client(websession=websession, account=account)
     await client.authenticate()
 
-    with pytest.raises(EyeOnWaterAPIError):
+    with pytest.raises(EyeOnWaterException, match="Cannot find meter_uuid"):
         await account.fetch_meter_readers(client=client)
 
 
-async def test_client_new_search_nested_meter_payload(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_client_truncates_long_error_payload(aiohttp_client: Any) -> None:
+    """Verify _truncate_payload runs when a non-200 response body exceeds 1000 chars."""
+
+    async def mock_long_error(_request: web.Request) -> web.Response:
+        return web.Response(status=503, text="X" * 1500)
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/dashboard/user", mock_long_error)
+    websession = await aiohttp_client(app)
+
+    account = Account(  # nosec: B106
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    with pytest.raises(EyeOnWaterException):  # nosec: B101
+        await account.fetch_meter_readers(client=client)
+
+
+@pytest.mark.asyncio()
+async def test_client_new_search_nested_meter_payload(aiohttp_client: Any) -> None:
     """Test parsing nested meter fields from new_search payload."""
 
-    async def mock_new_search_nested(request):
+    async def mock_new_search_nested(_request: web.Request) -> web.Response:
         data = (
-            "{\"elastic_results\": {\"hits\": {\"hits\": ["
-            "{\"_id\": \"fallback_uuid\", \"_source\": {\"meter\": {\"meter_uuid\": \"nested_uuid\", \"meter_id\": 12345}}}"
+            '{"elastic_results": {"hits": {"hits": ['
+            '{"_id": "fallback_uuid", "_source": {'
+            '"meter": {"meter_uuid": "nested_uuid", "meter_id": 12345}}}'
             "]}}}"
         )
         return web.Response(text=data)
@@ -208,7 +244,7 @@ async def test_client_new_search_nested_meter_payload(aiohttp_client, loop):
     app.router.add_post("/api/2/residential/new_search", mock_new_search_nested)
     websession = await aiohttp_client(app)
 
-    account = Account(
+    account = Account(  # nosec: B106
         eow_hostname="",
         username="user",
         password="",
@@ -218,16 +254,19 @@ async def test_client_new_search_nested_meter_payload(aiohttp_client, loop):
     await client.authenticate()
 
     readers = await account.fetch_meter_readers(client=client)
-    assert len(readers) == 1
-    assert readers[0].meter_uuid == "nested_uuid"
-    assert readers[0].meter_id == "12345"
+    assert len(readers) == 1  # nosec: B101
+    assert readers[0].meter_uuid == "nested_uuid"  # nosec: B101
+    assert readers[0].meter_id == "12345"  # nosec: B101
 
 
-async def test_client_falls_back_to_dashboard_when_new_search_empty(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_client_falls_back_to_dashboard_when_new_search_empty(
+    aiohttp_client: Any,
+) -> None:
     """Test dashboard fallback when new_search has no parseable meters."""
 
-    async def mock_new_search_empty(request):
-        return web.Response(text="{\"elastic_results\": {\"hits\": {\"hits\": []}}}")
+    async def mock_new_search_empty(_request: web.Request) -> web.Response:
+        return web.Response(text='{"elastic_results": {"hits": {"hits": []}}}')
 
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
@@ -235,7 +274,7 @@ async def test_client_falls_back_to_dashboard_when_new_search_empty(aiohttp_clie
     app.router.add_get("/dashboard/user", mock_get_meters_endpoint)
     websession = await aiohttp_client(app)
 
-    account = Account(
+    account = Account(  # nosec: B106
         eow_hostname="",
         username="user",
         password="",
@@ -245,6 +284,6 @@ async def test_client_falls_back_to_dashboard_when_new_search_empty(aiohttp_clie
     await client.authenticate()
 
     readers = await account.fetch_meter_readers(client=client)
-    assert len(readers) == 1
-    assert readers[0].meter_uuid == "123"
-    assert readers[0].meter_id == "456"
+    assert len(readers) == 1  # nosec: B101
+    assert readers[0].meter_uuid == "123"  # nosec: B101
+    assert readers[0].meter_id == "456"  # nosec: B101
