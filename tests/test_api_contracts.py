@@ -6,15 +6,15 @@ import datetime
 from pathlib import Path
 from typing import Any
 
-import pytest
 from aiohttp import web
-
 from conftest import (
     build_client,
     mock_historical_data_endpoint,
     mock_read_meter_endpoint,
     mock_signin_endpoint,
 )
+import pytest
+
 from pyonwater import MeterReader
 
 
@@ -56,7 +56,9 @@ async def test_consumption_request_payload(aiohttp_client: Any) -> None:
         assert params["aggregate"] == "hourly"  # nosec: B101
         assert params["perspective"] == "billing"  # nosec: B101
         assert params["date"] == "01/02/2024"  # nosec: B101
-        assert "units" in params  # nosec: B101  # Critical: API returns empty without this
+        assert (
+            "units" in params
+        )  # nosec: B101  # Critical: API returns empty without this
         assert params["source"] == "barnacle"  # nosec: B101
         assert params["combine"] == "true"  # nosec: B101
 

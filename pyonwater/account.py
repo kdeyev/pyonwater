@@ -1,8 +1,9 @@
 """EyeOnWater API integration."""
+
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 import urllib.parse
 
 from .exceptions import EyeOnWaterAPIError
@@ -35,14 +36,14 @@ class Account:
 
     async def fetch_meter_readers(self, client: Client) -> list[MeterReader]:
         """List the meter readers associated with the account."""
-        meters = await self._fetch_meter_readers_new_search(client)
-        if meters:
-            return meters
+        new_search_meters = await self._fetch_meter_readers_new_search(client)
+        if new_search_meters:
+            return new_search_meters
 
         path = DASHBOARD_ENDPOINT + urllib.parse.quote(self.username)
         data = await client.request(path=path, method="get")
 
-        meters = []
+        meters: list[MeterReader] = []
         lines = data.split("\n")
         for line in lines:
             if INFO_PREFIX in line:
@@ -54,8 +55,8 @@ class Account:
                             msg,
                         )
 
-                    meter_uuid = meter_info[METER_UUID_FIELD]
-                    meter_id = meter_info[METER_ID_FIELD]
+                    meter_uuid: str = meter_info[METER_UUID_FIELD]
+                    meter_id: str = meter_info[METER_ID_FIELD]
 
                     meter = MeterReader(
                         meter_uuid=meter_uuid,
@@ -75,25 +76,30 @@ class Account:
                 method="post",
                 json={"query": {"match_all": {}}},
             )
-            payload = json.loads(raw)
+            payload: dict[str, Any] = json.loads(raw)
         except (EyeOnWaterAPIError, json.JSONDecodeError, TypeError, ValueError):
             return []
 
-        hits = payload.get("elastic_results", {}).get("hits", {}).get("hits", [])
+        elastic: dict[str, Any] = payload.get("elastic_results") or {}
+        hits_wrapper: dict[str, Any] = elastic.get("hits") or {}
+        hits: list[Any] = hits_wrapper.get("hits") or []
         meters: list[MeterReader] = []
         for hit in hits:
-            source = hit.get("_source", {})
-            meter_obj = source.get("meter", {})
-            if not isinstance(meter_obj, dict):
-                meter_obj = {}
+            source: dict[str, Any] = hit.get("_source") or {}
+            meter_obj_raw: Any = source.get("meter")
+            meter_obj: dict[str, Any] = (
+                cast(dict[str, Any], meter_obj_raw)
+                if isinstance(meter_obj_raw, dict)
+                else {}
+            )
 
-            meter_uuid = (
+            meter_uuid: str | None = (
                 meter_obj.get("meter_uuid")
                 or source.get(METER_UUID_FIELD)
                 or source.get("meter.meter_uuid")
                 or hit.get("_id")
             )
-            meter_id = (
+            meter_id: str | None = (
                 meter_obj.get("meter_id")
                 or source.get(METER_ID_FIELD)
                 or source.get("meter.meter_id")
