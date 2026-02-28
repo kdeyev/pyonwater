@@ -1,4 +1,4 @@
-"""Tests for Series flexible date parsing (pydantic v2 field_validator)."""  # nosec: B101, B106
+"""Tests for Series flexible date parsing (pydantic v2 field_validator)."""
 
 from datetime import datetime
 

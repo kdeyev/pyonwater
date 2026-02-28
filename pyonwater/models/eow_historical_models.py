@@ -1,3 +1,5 @@
+"""Pydantic models for EyeOnWater historical data API responses."""
+
 # ruff: noqa
 
 from __future__ import annotations
@@ -11,10 +13,14 @@ from .units import EOWUnits
 
 
 class Register0EncoderItem(BaseModel):
+    """Encoder item from register 0."""
+
     dials: Optional[int] = None
 
 
 class Hit(BaseModel):
+    """Meter hit record from new_search response."""
+
     # Mandatory fields
     meter_timezone: list[str] = Field(..., alias="meter.timezone")
 
@@ -51,6 +57,8 @@ class Hit(BaseModel):
 
 
 class Params(BaseModel):
+    """Request parameters echoed back in historical data response."""
+
     # Optional fields
     start_date_utc: Optional[float] = None
     date: Optional[datetime] = None
@@ -111,9 +119,9 @@ class Series(BaseModel):
         date_formats = [
             "%Y-%m-%d %H:%M:%S",  # Actual API format: 2026-02-10 00:00:00
             "%Y-%m-%dT%H:%M:%S",  # ISO datetime:      2026-02-10T00:00:00
-            "%Y-%m-%d",           # Date only:          2026-02-10
-            "%Y-%m",              # Month only:         2026-02
-            "%Y",                 # Year only:          2026
+            "%Y-%m-%d",  # Date only:          2026-02-10
+            "%Y-%m",  # Month only:         2026-02
+            "%Y",  # Year only:          2026
         ]
 
         for fmt in date_formats:
@@ -129,6 +137,8 @@ class Series(BaseModel):
 
 
 class Legend(BaseModel):
+    """Legend metadata for a time series."""
+
     # Optional fields
     supply_zone_id: Optional[str] = None
     location_name: Optional[str] = None
@@ -140,6 +150,8 @@ class Legend(BaseModel):
 
 
 class TimeSerie(BaseModel):
+    """One time series stream within a historical data response."""
+
     # Mandatory fields
     series: list[Series]
 
@@ -148,6 +160,8 @@ class TimeSerie(BaseModel):
 
 
 class HistoricalData(BaseModel):
+    """Top-level historical consumption data response."""
+
     # Mandatory fields
     hit: Hit
     timeseries: dict[str, TimeSerie]
