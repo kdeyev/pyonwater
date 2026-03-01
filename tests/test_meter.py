@@ -1,6 +1,8 @@
 """Tests for pyonwater meter."""
 
 
+from datetime import datetime, timedelta, timezone
+
 from aiohttp import web
 from conftest import (
     build_client,
@@ -13,7 +15,13 @@ from conftest import (
 )
 import pytest
 
-from pyonwater import EOWUnits, EyeOnWaterException, EyeOnWaterUnitError, NativeUnits
+from pyonwater import (
+    DataPoint,
+    EOWUnits,
+    EyeOnWaterException,
+    EyeOnWaterUnitError,
+    NativeUnits,
+)
 
 """Mock for historical data request, but no actual data"""
 mock_historical_data_nodata_endpoint = build_data_endpoint(
@@ -245,3 +253,30 @@ async def test_meter_historical_same_date_more_data(aiohttp_client, loop):
     await meter.read_historical_data(client=client2, days_to_load=1)
     # The moredata mock has 2 entries, should replace
     assert len(meter.last_historical_data) >= 1
+
+
+async def test_meter_convert_to_native_preserves_flow_and_end_dt(aiohttp_client, loop):
+    """Test flow_value conversion and end_dt passthrough on DataPoint conversion."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    websession = await aiohttp_client(app)
+
+    account, client = await build_client(websession)
+    meter = await build_meter(client)
+
+    start_dt = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    end_dt = start_dt + timedelta(hours=1)
+    converted = meter._convert_to_native(
+        DataPoint(
+            dt=start_dt,
+            reading=1.0,
+            unit=EOWUnits.UNIT_100_GAL,
+            flow_value=2.0,
+            end_dt=end_dt,
+        )
+    )
+
+    assert converted.reading == 100.0
+    assert converted.flow_value == 200.0
+    assert converted.end_dt == end_dt

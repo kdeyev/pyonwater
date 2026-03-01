@@ -106,6 +106,15 @@ class Meter:
         native_reading = convert_to_native(
             self._native_unit_of_measurement, EOWUnits(dp.unit), dp.reading
         )
+        native_flow_value = None
+        if dp.flow_value is not None:
+            native_flow_value = convert_to_native(
+                self._native_unit_of_measurement, EOWUnits(dp.unit), dp.flow_value
+            )
         return DataPoint(
-            dt=dp.dt, reading=native_reading, unit=self._native_unit_of_measurement
+            dt=dp.dt,
+            reading=native_reading,
+            unit=self._native_unit_of_measurement,
+            flow_value=native_flow_value,
+            end_dt=dp.end_dt,
         )

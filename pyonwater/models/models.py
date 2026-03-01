@@ -16,3 +16,5 @@ class DataPoint:
     dt: datetime
     reading: float
     unit: str
+    flow_value: float | None = None
+    end_dt: datetime | None = None

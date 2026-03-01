@@ -118,6 +118,15 @@ class Notes(BaseModel):
     count: Optional[int] = None
 
 
+class LeakStatus(BaseModel):
+    # Optional fields
+    rate: Optional[float] = None
+    max_flow_rate: Optional[float] = None
+    received_time: Optional[datetime] = None
+    total_leak_24hrs: Optional[float] = None
+    time: Optional[datetime] = None
+
+
 class Flow(BaseModel):
     # Optional fields
     this_week: Optional[float] = None
@@ -190,6 +199,7 @@ class MeterData(BaseModel):
     flow: Optional[Flow] = None
     longitude: Optional[str] = None
     flags: Optional[ActiveFlags] = None
+    leak: Optional["LeakStatus"] = None
     model: Optional[str] = None
     sequence_number: Optional[int] = None
 
@@ -279,6 +289,7 @@ class Reading(BaseModel):
     latest_read: LatestRead
 
     # Optional fields
+    leak: Optional["LeakStatus"] = None
     battery: Optional[Battery] = None
     customer_uuid: Optional[str] = None
     aggregation_seconds: Optional[int] = None
@@ -385,6 +396,7 @@ class MeterInfo(BaseModel):
     reading: Reading = Field(..., alias="register_0")
 
     # Optional fields
+    leak: Optional[LeakStatus] = None
     sensors: Optional[Sensors] = None
     utility: Optional[Utility] = None
     updated: Optional[int] = None
