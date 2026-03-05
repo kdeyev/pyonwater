@@ -1,5 +1,6 @@
 """Tests for units conversion."""
 
+from typing import Any
 
 import pytest
 
@@ -31,25 +32,19 @@ def test_deduce_native_unit():
     assert deduce_native_units(EOWUnits.UNIT_CCF) == NativeUnits.CF
 
     with pytest.raises(EyeOnWaterUnitError):
-        assert deduce_native_units("hey")
+        bad_unit: Any = "hey"
+        assert deduce_native_units(bad_unit)
 
 
 def test_convert_units():
     """Test units conversion."""
     assert convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_GAL, 1.0) == 1.0
-    assert convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_KGAL, 1.0) == pytest.approx(
-        1000.0
-    )
-    assert convert_to_native(
-        NativeUnits.GAL, EOWUnits.UNIT_100_GAL, 1.0
-    ) == pytest.approx(100.0)
-    assert convert_to_native(
-        NativeUnits.GAL, EOWUnits.UNIT_10_GAL, 1.0
-    ) == pytest.approx(10.0)
+    expected_kgal = 1000.0
+    assert convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_KGAL, 1.0) == expected_kgal
+    assert convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_100_GAL, 1.0) == 100.0
+    assert convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_10_GAL, 1.0) == 10.0
     with pytest.raises(EyeOnWaterUnitError):
-        assert convert_to_native(
-            NativeUnits.GAL, EOWUnits.UNIT_CF, 1.0
-        ) == pytest.approx(10.0)
+        assert convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_CF, 1.0) == 10.0
 
     assert convert_to_native(NativeUnits.CF, EOWUnits.UNIT_CF, 1) == 1.0
     assert convert_to_native(NativeUnits.CF, EOWUnits.UNIT_CUBIC_FEET, 1) == 1.0
@@ -68,4 +63,5 @@ def test_convert_units():
         assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_GAL, 1.0)
 
     with pytest.raises(EyeOnWaterUnitError):
-        assert convert_to_native("hey", EOWUnits.UNIT_GAL, 1.0)
+        bad_unit: Any = "hey"
+        convert_to_native(bad_unit, EOWUnits.UNIT_GAL, 1.0)
