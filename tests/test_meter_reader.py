@@ -3,6 +3,7 @@
 import json
 import logging
 from typing import Any
+from unittest.mock import patch
 
 from aiohttp import web
 from conftest import (
@@ -182,3 +183,80 @@ async def test_meter_reader_historical_invalid_json_raises(aiohttp_client: Any) 
 
     with pytest.raises(EyeOnWaterAPIError):  # nosec: B101
         await reader.read_historical_data(client=client, days_to_load=1)
+
+
+@pytest.mark.asyncio()
+async def test_meter_reader_range_export(aiohttp_client: Any) -> None:
+    """Verify export-range polling and CSV parsing."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+
+    async def mock_export_initiate(request: web.Request) -> web.Response:
+        assert request.query["meter_uuid"] == "meter_uuid"  # nosec: B101
+        assert request.query["row-format"] == "range"  # nosec: B101
+        return web.Response(text='{"task_id":"task-123"}')
+
+    poll_count = 0
+
+    async def mock_export_status(_request: web.Request) -> web.Response:
+        nonlocal poll_count
+        poll_count += 1
+        if poll_count == 1:
+            return web.Response(text='{"state":"queued"}')
+        return web.Response(
+            text=json.dumps(
+                {
+                    "state": "done",
+                    "result": {
+                        "url": "https://eyeonwater.com/export/download.csv?token=abc"
+                    },
+                }
+            )
+        )
+
+    async def mock_export_csv(_request: web.Request) -> web.Response:
+        return web.Response(
+            text=(
+                "Read_Time,Read,Read_Unit,Flow,Timezone\n"
+                "03/01/2026 1:15 PM,101.5,GAL,1.25,US/Pacific\n"
+                "03/01/2026 12:15 PM,100.0,GAL,,US/Pacific\n"
+            )
+        )
+
+    app.router.add_get("/reports/export_initiate", mock_export_initiate)
+    app.router.add_get(
+        "/reports/export_check_status/task-123",
+        mock_export_status,
+    )
+    app.router.add_get("/export/download.csv", mock_export_csv)
+
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+
+    with patch("pyonwater.meter_reader.asyncio.sleep") as sleep_mock:
+        data = await reader.read_historical_data_range_export(client=client, days_to_load=2)
+
+    assert len(data) == 2  # nosec: B101
+    assert [point.reading for point in data] == [100.0, 101.5]  # nosec: B101
+    assert data[0].flow_value is None  # nosec: B101
+    assert data[1].flow_value == 1.25  # nosec: B101
+    assert data[0].dt.tzinfo is not None  # nosec: B101
+    sleep_mock.assert_awaited_once_with(0.1)
+
+
+def test_normalize_export_path() -> None:
+    """Verify export URLs are converted into client request paths."""
+    assert (  # nosec: B101
+        MeterReader._normalize_export_path(
+            "https://eyeonwater.com/export/download.csv?token=abc"
+        )
+        == "/export/download.csv?token=abc"
+    )
+    assert MeterReader._normalize_export_path("/export/download.csv") == "/export/download.csv"  # nosec: B101
+
+
+def test_parse_export_datetime_invalid() -> None:
+    """Verify invalid export timestamps raise a clear error."""
+    with pytest.raises(EyeOnWaterAPIError, match="Unrecognized export datetime"):
+        MeterReader._parse_export_datetime("not-a-date")
