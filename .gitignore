@@ -165,3 +165,11 @@ cython_debug/
 
 # Local PR chain notes (not for repo)
 docs/pr/
+
+# Local Copilot workspace customizations (not for repo)
+.github/agents/
+.github/copilot-instructions.md
+.github/skills/
+
+# Local scratch files
+*.tar
