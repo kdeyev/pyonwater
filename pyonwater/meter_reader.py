@@ -6,7 +6,7 @@ import asyncio
 import datetime
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import ValidationError
 import pytz
@@ -238,7 +238,9 @@ class MeterReader:
         except ValidationError as e:
             # A json_invalid error with empty input means the API returned an
             # empty or null body that slipped past the stripped-string check above.
-            errors = e.errors()
+            # ErrorDetails (pydantic_core TypedDict) has Any-typed fields; annotate
+            # errors explicitly so pyright resolves .get() calls.
+            errors: list[dict[str, Any]] = cast(list[dict[str, Any]], e.errors())
             if (
                 errors
                 and errors[0].get("type") == "json_invalid"
