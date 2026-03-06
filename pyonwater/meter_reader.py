@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import datetime
 import json
 import logging
+import time
 from typing import TYPE_CHECKING, Any, cast
+from urllib.parse import urlparse
 
 from pydantic import ValidationError
 import pytz
@@ -20,6 +23,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
 SEARCH_ENDPOINT = "/api/2/residential/new_search"
 CONSUMPTION_ENDPOINT = "/api/2/residential/consumption?eow=True"
+EXPORT_INIT_ENDPOINT = "/reports/export_initiate"
+EXPORT_STATUS_ENDPOINT = "/reports/export_check_status/"
 
 # Fallback units when the caller does not specify a preference.
 DEFAULT_REQUEST_UNITS = "cm"
@@ -280,3 +285,161 @@ class MeterReader:
 
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.convert, data, key)
+
+    async def read_historical_data_range_export(
+        self,
+        client: Client,
+        days_to_load: int,
+        *,
+        include_today: bool = True,
+        export_resolution: str = "hourly",
+        export_unit: str = "Gallons",
+    ) -> list[DataPoint]:
+        """Retrieve historical data via the export range API."""
+        if days_to_load < 1:
+            msg = f"days_to_load must be at least 1, got {days_to_load}"
+            raise ValueError(msg)
+
+        today = datetime.datetime.now().replace(
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+        if include_today:
+            end_date = today
+            start_date = today - datetime.timedelta(days=max(days_to_load - 1, 0))
+        else:
+            end_date = today - datetime.timedelta(days=1)
+            start_date = end_date - datetime.timedelta(days=max(days_to_load - 1, 0))
+
+        params = {
+            "export_unit": export_unit,
+            "site": "residential",
+            "export_resolution": export_resolution,
+            "start-date": start_date.strftime("%m/%d/%Y"),
+            "end-date": end_date.strftime("%m/%d/%Y"),
+            "meter_uuid": self.meter_uuid,
+            "row-format": "range",
+            "export_all": "false",
+            "_": int(time.time() * 1000),
+        }
+
+        raw = await client.request(
+            path=EXPORT_INIT_ENDPOINT,
+            method="get",
+            params=params,
+        )
+        try:
+            payload = json.loads(raw)
+        except Exception as exc:
+            msg = f"Unexpected export initiate response: {raw[:200]}"
+            raise EyeOnWaterAPIError(msg) from exc
+
+        task_id = payload.get("task_id")
+        if not task_id:
+            msg = f"Export task id not found in response: {payload}"
+            raise EyeOnWaterAPIError(msg)
+
+        status: dict[str, Any] | None = None
+        for attempt in range(40):
+            if attempt:
+                await asyncio.sleep(0.1)
+            status_raw = await client.request(
+                path=f"{EXPORT_STATUS_ENDPOINT}{task_id}",
+                method="get",
+                params={"_": int(time.time() * 1000)},
+            )
+            try:
+                status = json.loads(status_raw)
+            except Exception:
+                status = None
+            if not status:
+                continue
+            state = status.get("state")
+            if state == "done":
+                break
+            if state == "error":
+                msg = status.get("message", "Export task error")
+                raise EyeOnWaterAPIError(msg)
+
+        if not status or status.get("state") != "done":
+            msg = f"Export task did not complete: {status}"
+            raise EyeOnWaterAPIError(msg)
+
+        result = status.get("result")
+        if isinstance(result, str):
+            try:
+                result = json.loads(result)
+            except Exception:
+                result = None
+        if not isinstance(result, dict) or "url" not in result:
+            msg = f"Export result missing URL: {status}"
+            raise EyeOnWaterAPIError(msg)
+
+        export_path = self._normalize_export_path(result["url"])
+        raw_csv = await client.request(path=export_path, method="get")
+        return self._parse_export_csv(raw_csv)
+
+    @staticmethod
+    def _normalize_export_path(export_url: str) -> str:
+        """Normalize export URLs into a request path."""
+        if export_url.startswith("/"):
+            return export_url
+        if export_url.startswith(("http://", "https://")):
+            parsed = urlparse(export_url)
+            if parsed.path:
+                path = parsed.path
+                if parsed.query:
+                    path = f"{path}?{parsed.query}"
+                return path
+        msg = f"Unsupported export url format: {export_url}"
+        raise EyeOnWaterAPIError(msg)
+
+    def _parse_export_csv(self, raw_csv: str) -> list[DataPoint]:
+        """Parse range export CSV into data points."""
+        if not raw_csv:
+            return []
+
+        reader = csv.DictReader(raw_csv.splitlines())
+        points: list[DataPoint] = []
+        for row in reader:
+            read_time = row.get("Read_Time") or row.get("Read Time")
+            timezone_name = row.get("Timezone") or "UTC"
+            read_value = row.get("Read")
+            read_unit = row.get("Read_Unit") or row.get("Read Unit") or row.get("Unit")
+            flow_value = row.get("Flow")
+            if not read_time or read_value is None or not read_unit:
+                continue
+            try:
+                dt_value = self._parse_export_datetime(read_time)
+                timezone = pytz.timezone(timezone_name)
+                reading = float(read_value)
+                flow = float(flow_value) if flow_value not in (None, "") else None
+            except Exception:
+                continue
+            points.append(
+                DataPoint(
+                    dt=timezone.localize(dt_value),
+                    reading=reading,
+                    unit=read_unit,
+                    flow_value=flow,
+                )
+            )
+
+        points.sort(key=lambda d: d.dt)
+        return points
+
+    @staticmethod
+    def _parse_export_datetime(value: str) -> datetime.datetime:
+        """Parse export timestamps with the formats observed in EOW exports."""
+        for fmt in ("%m/%d/%Y %H:%M", "%m/%d/%Y %I:%M %p"):
+            try:
+                return datetime.datetime.strptime(value, fmt)
+            except ValueError:
+                continue
+        try:
+            return datetime.datetime.fromisoformat(value)
+        except ValueError as exc:
+            msg = f"Unrecognized export datetime: {value}"
+            raise EyeOnWaterAPIError(msg) from exc
