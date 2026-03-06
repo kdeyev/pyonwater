@@ -89,5 +89,5 @@ exclude_lines = [
 ]
 
 [tool.pylint.MASTER]
-extension-pkg-whitelist = ["pydantic"]
+extension-pkg-allow-list = ["pydantic"]
 ignore-paths = [".venv"]

@@ -203,6 +203,11 @@ def build_consumption_endpoint_with_aggregation(
 
     Args:
         _aggregation: The aggregation level (e.g., 'hourly', 'daily').
+            Intentionally not forwarded to the response — the mock always
+            returns the same fixture regardless of aggregation level.  The
+            leading underscore signals this is accepted but unused; tests
+            that need aggregation-aware responses should use
+            ``build_data_with_units_endpoint`` or a custom endpoint.
 
     Returns:
         A mock endpoint that returns historical data with the specified

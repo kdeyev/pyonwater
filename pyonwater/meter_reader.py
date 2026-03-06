@@ -276,5 +276,5 @@ class MeterReader:
             len(data.timeseries[key].series),
         )
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.convert, data, key)

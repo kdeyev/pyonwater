@@ -49,9 +49,13 @@ class AggregationLevel(str, Enum):
 
     Each level has a corresponding aggregate_group strftime format
     that the API uses internally.
+
+    Note: ``QUARTER_HOURLY`` maps to the wire value ``"hr"`` — the name reads
+    like "hourly" but the EyeOnWater API uses ``"hr"`` to mean 15-minute
+    (quarter-hour) resolution, not 1-hour resolution.
     """
 
-    QUARTER_HOURLY = "hr"  # 15-minute intervals, group: %Y-%m-%d %H:%i:00
+    QUARTER_HOURLY = "hr"  # EyeOnWater wire value: "hr" = 15-min intervals
     HOURLY = "hourly"  # 1-hour intervals, group: %Y-%m-%d %H:00:00
     DAILY = "daily"  # 1-day intervals, group: %Y-%m-%d
     WEEKLY = "weekly"  # 7-day intervals, group: %Y-%m-%d
