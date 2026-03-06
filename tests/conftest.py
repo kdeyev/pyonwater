@@ -40,9 +40,12 @@ def replace_units(data: Any, new_unit: str) -> Any:
             d[key] = replace_units(d[key], new_unit)
         return d
     if isinstance(data, list):
-        for i, item in enumerate(data):
-            data[i] = replace_units(item, new_unit)
-        return data
+        # cast: isinstance(data, list) narrows Any→list but pyright still
+        # infers list[Unknown]; explicit cast gives pyright the full type.
+        lst = cast(list[Any], data)
+        for i, item in enumerate(lst):
+            lst[i] = replace_units(item, new_unit)
+        return lst
     if is_unit(data):
         return new_unit
     return data
