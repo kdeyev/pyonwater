@@ -1,8 +1,7 @@
 """Tests for pyonwater meter."""
 
-from typing import Any
-
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from aiohttp import web
 from conftest import (
@@ -261,19 +260,21 @@ async def test_meter_historical_same_date_more_data(aiohttp_client: Any) -> None
     assert len(meter.last_historical_data) >= 1
 
 
-async def test_meter_convert_to_native_preserves_flow_and_end_dt(aiohttp_client, loop):
+async def test_meter_convert_to_native_preserves_flow_and_end_dt(
+    aiohttp_client: Any,
+) -> None:
     """Test flow_value conversion and end_dt passthrough on DataPoint conversion."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
     meter = await build_meter(client)
 
     start_dt = datetime(2026, 1, 1, tzinfo=timezone.utc)
     end_dt = start_dt + timedelta(hours=1)
-    converted = meter._convert_to_native(
+    converted = meter.convert_to_native(
         DataPoint(
             dt=start_dt,
             reading=1.0,

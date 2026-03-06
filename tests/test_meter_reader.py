@@ -1,6 +1,8 @@
-"""Tests for pyonwater meter reader."""
+"""Tests for pyonwater meter reader."""  # nosec: B101, B106
 
 import json
+import logging
+from typing import Any
 
 from aiohttp import web
 from conftest import (
@@ -16,7 +18,8 @@ import pytest
 from pyonwater import EyeOnWaterAPIError, MeterReader
 
 
-async def test_meter_reader(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_meter_reader(aiohttp_client: Any) -> None:
     """Basic meter reader test."""
     app = web.Application()
 
@@ -26,40 +29,43 @@ async def test_meter_reader(aiohttp_client, loop):
 
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
 
     meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
     meter_info = await meter_reader.read_meter_info(client=client)
-    assert meter_info.reading.latest_read.full_read != 0
+    assert meter_info.reading.latest_read.full_read != 0  # nosec: B101
 
     await meter_reader.read_historical_data(client=client, days_to_load=1)
 
 
-async def test_meter_reader_nodata(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_meter_reader_nodata(aiohttp_client: Any) -> None:
     """Basic meter reader test."""
     app = web.Application()
 
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
     app.router.add_post(
-        "/api/2/residential/consumption", mock_historical_data_no_data_endpoint
+        "/api/2/residential/consumption",
+        mock_historical_data_no_data_endpoint,
     )
 
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
 
     meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
     meter_info = await meter_reader.read_meter_info(client=client)
-    assert meter_info.reading.latest_read.full_read != 0
+    assert meter_info.reading.latest_read.full_read != 0  # nosec: B101
 
     data = await meter_reader.read_historical_data(client=client, days_to_load=1)
-    assert data == []
+    assert data == []  # nosec: B101
 
 
-async def test_meter_reader_wrong_units(aiohttp_client, loop):
+@pytest.mark.asyncio()
+async def test_meter_reader_wrong_units(aiohttp_client: Any) -> None:
     """Test reading date with unknown units."""
     app = web.Application()
 
@@ -71,7 +77,7 @@ async def test_meter_reader_wrong_units(aiohttp_client, loop):
 
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
 
     meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
@@ -79,49 +85,100 @@ async def test_meter_reader_wrong_units(aiohttp_client, loop):
         await meter_reader.read_meter_info(client=client)
 
 
-async def test_meter_reader_multiple_meters(aiohttp_client, loop):
-    """Test that multiple meter readings raises an exception."""
+@pytest.mark.asyncio()
+async def test_meter_reader_empty_response(aiohttp_client: Any) -> None:
+    """Test handling of empty API responses.
 
-    def mock_multiple_meters_endpoint(request):
-        with open("tests//mock_data/read_meter_mock_anonymized.json") as f:
-            data = json.load(f)
-            # Duplicate the meter entry to simulate multiple meters
-            hits = data["elastic_results"]["hits"]["hits"]
-            hits.append(hits[0])
-            return web.Response(text=json.dumps(data))
-
+    Real API behavior when params are invalid.
+    """
     app = web.Application()
+
     app.router.add_post("/account/signin", mock_signin_endpoint)
-    app.router.add_post("/api/2/residential/new_search", mock_multiple_meters_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+
+    async def mock_empty_response(_request: web.Request) -> web.Response:
+        """Mock endpoint that returns empty response like real API does.
+
+        Simulates real API behavior with invalid params.
+        """
+        return web.Response(text="")
+
+    app.router.add_post("/api/2/residential/consumption", mock_empty_response)
 
     websession = await aiohttp_client(app)
 
-    account, client = await build_client(websession)
+    _, client = await build_client(websession)
 
     meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
-    with pytest.raises(Exception, match="More than one meter reading found"):
+    # Empty responses should be handled gracefully (not crash)
+    # The read_historical_data method catches EyeOnWaterResponseIsEmpty and continues
+    data = await meter_reader.read_historical_data(client=client, days_to_load=1)
+    assert data == []  # nosec: B101  # Empty response results in no data points
+
+
+@pytest.mark.asyncio()
+async def test_meter_reader_raises_for_multiple_meters(aiohttp_client: Any) -> None:
+    """Verify EyeOnWaterAPIError raised when new_search returns multiple hits."""
+    with open("tests/mock_data/read_meter_mock_anonymized.json", encoding="utf-8") as f:
+        single_hit_data = json.load(f)
+
+    hit = single_hit_data["elastic_results"]["hits"]["hits"][0]
+    single_hit_data["elastic_results"]["hits"]["hits"] = [hit, hit]
+
+    async def mock_two_meters(_request: web.Request) -> web.Response:
+        return web.Response(text=json.dumps(single_hit_data))
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_two_meters)
+
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+
+    with pytest.raises(EyeOnWaterAPIError, match="More than one meter reading found"):
         await meter_reader.read_meter_info(client=client)
 
 
-async def test_meter_reader_invalid_historical_response(aiohttp_client, loop):
-    """Test that invalid historical data response raises EyeOnWaterAPIError."""
+@pytest.mark.asyncio()
+async def test_meter_reader_historical_debug_logging(aiohttp_client: Any) -> None:
+    """With DEBUG logging enabled, the raw-response branch executes."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    app.router.add_post("/api/2/residential/consumption", mock_historical_data_endpoint)
 
-    def mock_invalid_historical_endpoint(request):
-        return web.Response(text='{"invalid": "data"}')
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+
+    logger = logging.getLogger("pyonwater.meter_reader")
+    original_level = logger.level
+    try:
+        logger.setLevel(logging.DEBUG)
+        data = await reader.read_historical_data(client=client, days_to_load=1)
+    finally:
+        logger.setLevel(original_level)
+
+    assert len(data) > 0  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_meter_reader_historical_invalid_json_raises(aiohttp_client: Any) -> None:
+    """Verify EyeOnWaterAPIError raised when consumption returns malformed JSON."""
+
+    async def mock_bad_json(_request: web.Request) -> web.Response:
+        return web.Response(text="{this is not: valid json!!!}")
 
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
-    app.router.add_post(
-        "/api/2/residential/consumption", mock_invalid_historical_endpoint
-    )
+    app.router.add_post("/api/2/residential/consumption", mock_bad_json)
 
     websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
-    account, client = await build_client(websession)
-
-    meter_reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
-
-    with pytest.raises(EyeOnWaterAPIError):
-        await meter_reader.read_historical_data(client=client, days_to_load=1)
+    with pytest.raises(EyeOnWaterAPIError):  # nosec: B101
+        await reader.read_historical_data(client=client, days_to_load=1)

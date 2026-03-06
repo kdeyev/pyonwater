@@ -314,7 +314,7 @@ class Reading(BaseModel):
     communication_seconds: Optional[int] = None
     cell_endpoint_name: Optional[str] = None
     rf_communication: Optional[bool] = None
-    low_read_limit: Optional[int]
+    low_read_limit: Optional[int] = None
     utility_use_1: Optional[str] = None
     timeslots: Optional[Timeslots] = None
     encoder: Optional[Encoder] = None

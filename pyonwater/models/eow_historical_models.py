@@ -1,20 +1,26 @@
+"""Pydantic models for EyeOnWater historical data API responses."""
+
 # ruff: noqa
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .units import EOWUnits
 
 
 class Register0EncoderItem(BaseModel):
+    """Encoder item from register 0."""
+
     dials: Optional[int] = None
 
 
 class Hit(BaseModel):
+    """Meter hit record from new_search response."""
+
     # Mandatory fields
     meter_timezone: list[str] = Field(..., alias="meter.timezone")
 
@@ -51,6 +57,8 @@ class Hit(BaseModel):
 
 
 class Params(BaseModel):
+    """Request parameters echoed back in historical data response."""
+
     # Optional fields
     start_date_utc: Optional[float] = None
     date: Optional[datetime] = None
@@ -70,6 +78,8 @@ class Params(BaseModel):
 
 
 class Series(BaseModel):
+    """Individual data point in a time series."""
+
     # Mandatory fields
     date: datetime
     display_unit: Optional[EOWUnits] = None
@@ -85,8 +95,50 @@ class Series(BaseModel):
     raw_read: Optional[int] = None
     unit: Optional[EOWUnits] = None
 
+    @field_validator("date", mode="before")
+    @classmethod
+    def parse_flexible_date(cls, v: Any) -> datetime:
+        """Parse date from various formats depending on API aggregation level.
+
+        The API returns different date formats based on aggregation:
+        - Hourly/Daily/Weekly: "YYYY-MM-DD HH:MM:SS" (space-separated,
+          actual API format)
+        - Daily/Weekly (ISO variant): "YYYY-MM-DDThh:mm:ss" (T-separated)
+        - Date only: "YYYY-MM-DD"
+        - Monthly: "YYYY-MM" (month only)
+        - Yearly: "YYYY" (year only)
+        """
+        if isinstance(v, datetime):
+            return v
+
+        if not isinstance(v, str):
+            raise ValueError(
+                f"Date must be a string or datetime, got {type(v).__name__}"
+            )
+
+        date_formats = [
+            "%Y-%m-%d %H:%M:%S",  # Actual API format: 2026-02-10 00:00:00
+            "%Y-%m-%dT%H:%M:%S",  # ISO datetime:      2026-02-10T00:00:00
+            "%Y-%m-%d",  # Date only:          2026-02-10
+            "%Y-%m",  # Month only:         2026-02
+            "%Y",  # Year only:          2026
+        ]
+
+        for fmt in date_formats:
+            try:
+                return datetime.strptime(v, fmt)
+            except ValueError:
+                continue
+
+        raise ValueError(
+            f"Unable to parse date '{v}'. Expected one of: "
+            f"YYYY-MM-DD HH:MM:SS, YYYY-MM-DDThh:mm:ss, YYYY-MM-DD, YYYY-MM, or YYYY"
+        )
+
 
 class Legend(BaseModel):
+    """Legend metadata for a time series."""
+
     # Optional fields
     supply_zone_id: Optional[str] = None
     location_name: Optional[str] = None
@@ -98,6 +150,8 @@ class Legend(BaseModel):
 
 
 class TimeSerie(BaseModel):
+    """One time series stream within a historical data response."""
+
     # Mandatory fields
     series: list[Series]
 
@@ -106,6 +160,8 @@ class TimeSerie(BaseModel):
 
 
 class HistoricalData(BaseModel):
+    """Top-level historical consumption data response."""
+
     # Mandatory fields
     hit: Hit
     timeseries: dict[str, TimeSerie]

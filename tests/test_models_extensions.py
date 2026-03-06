@@ -1,11 +1,13 @@
 """Tests for additional model fields."""
 
+from typing import Any
+
 from pyonwater.models import MeterInfo
 
 
 def test_meter_info_parses_leak_fields() -> None:
     """Test leak fields parse for top-level, meter, and reading payloads."""
-    payload = {
+    payload: dict[str, Any] = {
         "register_0": {
             "flags": {
                 "EmptyPipe": False,
@@ -18,7 +20,7 @@ def test_meter_info_parses_leak_fields() -> None:
             },
             "latest_read": {
                 "full_read": 1.0,
-                "units": "gal",
+                "units": "GAL",
                 "read_time": "2026-02-01T00:00:00Z",
             },
             "leak": {
