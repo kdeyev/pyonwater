@@ -354,6 +354,37 @@ class MeterReader:
             task_id,
         )
 
+        status = await self._poll_export_task(
+            client, task_id, max_retries, poll_interval
+        )
+
+        result = status.get("result")
+        if isinstance(result, str):
+            try:
+                result = json.loads(result)
+            except (json.JSONDecodeError, ValueError):
+                result = None
+        if not isinstance(result, dict) or "url" not in result:
+            msg = f"Export result missing URL: {status}"
+            raise EyeOnWaterAPIError(msg)
+
+        export_path = self._normalize_export_path(result["url"])
+        raw_csv = await client.request(path=export_path, method="get")
+        _LOGGER.debug(
+            "Downloaded export CSV for task %s: %d bytes", task_id, len(raw_csv)
+        )
+        points = self._parse_export_csv(raw_csv)
+        _LOGGER.debug("Parsed %d export data points for task %s", len(points), task_id)
+        return points
+
+    async def _poll_export_task(
+        self,
+        client: Client,
+        task_id: str,
+        max_retries: int,
+        poll_interval: float,
+    ) -> dict[str, Any]:
+        """Poll export task until done, error, or timeout."""
         status: dict[str, Any] | None = None
         for attempt in range(max_retries):
             if attempt:
@@ -378,31 +409,13 @@ class MeterReader:
             if not status:
                 continue
             if state == "done":
-                break
+                return status
             if state == "error":
                 msg = status.get("message", "Export task error")
                 raise EyeOnWaterAPIError(msg)
 
-        if not status or status.get("state") != "done":
-            msg = f"Export task did not complete: {status}"
-            raise EyeOnWaterAPIError(msg)
-
-        result = status.get("result")
-        if isinstance(result, str):
-            try:
-                result = json.loads(result)
-            except (json.JSONDecodeError, ValueError):
-                result = None
-        if not isinstance(result, dict) or "url" not in result:
-            msg = f"Export result missing URL: {status}"
-            raise EyeOnWaterAPIError(msg)
-
-        export_path = self._normalize_export_path(result["url"])
-        raw_csv = await client.request(path=export_path, method="get")
-        _LOGGER.debug("Downloaded export CSV for task %s: %d bytes", task_id, len(raw_csv))
-        points = self._parse_export_csv(raw_csv)
-        _LOGGER.debug("Parsed %d export data points for task %s", len(points), task_id)
-        return points
+        msg = f"Export task did not complete: {status}"
+        raise EyeOnWaterAPIError(msg)
 
     @staticmethod
     def _normalize_export_path(export_url: str) -> str:
@@ -438,9 +451,9 @@ class MeterReader:
                 dt_value = self._parse_export_datetime(read_time)
                 timezone = pytz.timezone(timezone_name)
                 reading = float(read_value)
-                flow = float(flow_value) if flow_value not in (None, "") else None
+                flow = float(flow_value) if flow_value not in (None, "") else None  # type: ignore[arg-type]
             except (ValueError, KeyError, pytz.UnknownTimeZoneError):
-                _LOGGER.warning("Skipping unparseable CSV row: %s", row)
+                _LOGGER.warning("Skipping unparsable CSV row: %s", row)
                 continue
             points.append(
                 DataPoint(

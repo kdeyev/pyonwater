@@ -261,7 +261,9 @@ async def test_meter_historical_same_date_more_data(aiohttp_client: Any) -> None
     assert len(meter.last_historical_data) >= 1
 
 
-async def test_meter_range_export_converts_and_preserves_cache(aiohttp_client: Any) -> None:
+async def test_meter_range_export_converts_and_preserves_cache(
+    aiohttp_client: Any,
+) -> None:
     """Export wrapper converts values, forwards params, and leaves cache unchanged."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)

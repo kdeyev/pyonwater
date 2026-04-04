@@ -257,7 +257,10 @@ def test_normalize_export_path() -> None:
         )
         == "/export/download.csv?token=abc"
     )
-    assert MeterReader._normalize_export_path("/export/download.csv") == "/export/download.csv"  # nosec: B101
+    assert (
+        MeterReader._normalize_export_path("/export/download.csv")
+        == "/export/download.csv"
+    )  # nosec: B101
 
 
 def test_parse_export_datetime_invalid() -> None:
@@ -266,7 +269,9 @@ def test_parse_export_datetime_invalid() -> None:
         MeterReader._parse_export_datetime("not-a-date")
 
 
-def test_parse_export_csv_skips_invalid_rows_with_warning(caplog: pytest.LogCaptureFixture) -> None:
+def test_parse_export_csv_skips_invalid_rows_with_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Verify malformed export rows are skipped with a warning."""
     reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
     raw_csv = (
@@ -280,4 +285,4 @@ def test_parse_export_csv_skips_invalid_rows_with_warning(caplog: pytest.LogCapt
 
     assert len(points) == 1  # nosec: B101
     assert points[0].reading == 100.0  # nosec: B101
-    assert "Skipping unparseable CSV row" in caplog.text  # nosec: B101
+    assert "Skipping unparsable CSV row" in caplog.text  # nosec: B101
