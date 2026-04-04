@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from unittest.mock import patch
 
 from aiohttp import web
 from conftest import (
@@ -258,6 +259,77 @@ async def test_meter_historical_same_date_more_data(aiohttp_client: Any) -> None
     await meter.read_historical_data(client=client2, days_to_load=1)
     # The moredata mock has 2 entries, should replace
     assert len(meter.last_historical_data) >= 1
+
+
+async def test_meter_range_export_converts_and_preserves_cache(aiohttp_client: Any) -> None:
+    """Export wrapper converts values, forwards params, and leaves cache unchanged."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post(
+        "/api/2/residential/new_search",
+        change_units_decorator(mock_read_meter_endpoint, EOWUnits.UNIT_100_GAL),
+    )
+
+    async def mock_export_initiate(request: web.Request) -> web.Response:
+        assert request.query["meter_uuid"] == "meter_uuid"  # nosec: B101
+        assert request.query["row-format"] == "range"  # nosec: B101
+        assert request.query["export_resolution"] == "daily"  # nosec: B101
+        assert request.query["export_unit"] == "Gallons"  # nosec: B101
+        assert request.query["start-date"] == "02/28/2026"  # nosec: B101
+        assert request.query["end-date"] == "03/01/2026"  # nosec: B101
+        return web.Response(text='{"task_id":"task-123"}')
+
+    async def mock_export_status(_request: web.Request) -> web.Response:
+        return web.Response(
+            text=(
+                '{"state":"done","result":'
+                '{"url":"https://eyeonwater.com/export/download.csv?token=abc"}}'
+            )
+        )
+
+    async def mock_export_csv(_request: web.Request) -> web.Response:
+        return web.Response(
+            text=(
+                "Read_Time,Read,Read_Unit,Flow,Timezone\n"
+                "03/01/2026 1:15 PM,1.5,100 GAL,0.25,US/Pacific\n"
+                "03/01/2026 12:15 PM,1.0,100 GAL,,US/Pacific\n"
+            )
+        )
+
+    app.router.add_get("/reports/export_initiate", mock_export_initiate)
+    app.router.add_get("/reports/export_check_status/task-123", mock_export_status)
+    app.router.add_get("/export/download.csv", mock_export_csv)
+
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    meter = await build_meter(client)
+    meter.last_historical_data = [
+        DataPoint(
+            dt=datetime(2026, 2, 1, tzinfo=timezone.utc),
+            reading=42.0,
+            unit=NativeUnits.GAL,
+        )
+    ]
+
+    with patch("pyonwater.meter_reader.datetime.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime(2026, 3, 1, tzinfo=timezone.utc)
+        mock_datetime.strptime.side_effect = datetime.strptime
+        mock_datetime.fromisoformat.side_effect = datetime.fromisoformat
+        data = await meter.read_historical_data_range_export(
+            client=client,
+            days_to_load=2,
+            include_today=True,
+            export_resolution="daily",
+            export_unit="Gallons",
+            max_retries=2,
+            poll_interval=0.1,
+        )
+
+    assert [point.reading for point in data] == [100.0, 150.0]  # nosec: B101
+    assert data[1].flow_value == 25.0  # nosec: B101
+    assert data[0].unit == NativeUnits.GAL  # nosec: B101
+    assert len(meter.last_historical_data) == 1  # nosec: B101
+    assert meter.last_historical_data[0].reading == 42.0  # nosec: B101
 
 
 async def test_meter_convert_to_native_preserves_flow_and_end_dt(
