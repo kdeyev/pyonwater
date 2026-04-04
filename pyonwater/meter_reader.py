@@ -98,7 +98,7 @@ class MeterReader:
             msg = f"days_to_load must be at least 1, got {days_to_load}"
             raise ValueError(msg)
 
-        today = datetime.datetime.now().replace(
+        today = datetime.datetime.now(tz=pytz.UTC).replace(
             hour=0,
             minute=0,
             second=0,
@@ -294,13 +294,21 @@ class MeterReader:
         include_today: bool = True,
         export_resolution: str = "hourly",
         export_unit: str = "Gallons",
+        max_retries: int = 30,
+        poll_interval: float = 2.0,
     ) -> list[DataPoint]:
         """Retrieve historical data via the export range API."""
         if days_to_load < 1:
             msg = f"days_to_load must be at least 1, got {days_to_load}"
             raise ValueError(msg)
+        if max_retries < 1:
+            msg = f"max_retries must be at least 1, got {max_retries}"
+            raise ValueError(msg)
+        if poll_interval < 0:
+            msg = f"poll_interval must be non-negative, got {poll_interval}"
+            raise ValueError(msg)
 
-        today = datetime.datetime.now().replace(
+        today = datetime.datetime.now(tz=pytz.UTC).replace(
             hour=0,
             minute=0,
             second=0,
@@ -332,7 +340,7 @@ class MeterReader:
         )
         try:
             payload = json.loads(raw)
-        except Exception as exc:
+        except (json.JSONDecodeError, ValueError) as exc:
             msg = f"Unexpected export initiate response: {raw[:200]}"
             raise EyeOnWaterAPIError(msg) from exc
 
@@ -340,11 +348,16 @@ class MeterReader:
         if not task_id:
             msg = f"Export task id not found in response: {payload}"
             raise EyeOnWaterAPIError(msg)
+        _LOGGER.debug(
+            "Initiated export for meter %s with task_id %s",
+            self.meter_uuid,
+            task_id,
+        )
 
         status: dict[str, Any] | None = None
-        for attempt in range(40):
+        for attempt in range(max_retries):
             if attempt:
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(poll_interval)
             status_raw = await client.request(
                 path=f"{EXPORT_STATUS_ENDPOINT}{task_id}",
                 method="get",
@@ -352,11 +365,18 @@ class MeterReader:
             )
             try:
                 status = json.loads(status_raw)
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 status = None
+            state = status.get("state") if isinstance(status, dict) else None
+            _LOGGER.debug(
+                "Export poll %d/%d for task %s returned state %s",
+                attempt + 1,
+                max_retries,
+                task_id,
+                state,
+            )
             if not status:
                 continue
-            state = status.get("state")
             if state == "done":
                 break
             if state == "error":
@@ -371,7 +391,7 @@ class MeterReader:
         if isinstance(result, str):
             try:
                 result = json.loads(result)
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 result = None
         if not isinstance(result, dict) or "url" not in result:
             msg = f"Export result missing URL: {status}"
@@ -379,7 +399,10 @@ class MeterReader:
 
         export_path = self._normalize_export_path(result["url"])
         raw_csv = await client.request(path=export_path, method="get")
-        return self._parse_export_csv(raw_csv)
+        _LOGGER.debug("Downloaded export CSV for task %s: %d bytes", task_id, len(raw_csv))
+        points = self._parse_export_csv(raw_csv)
+        _LOGGER.debug("Parsed %d export data points for task %s", len(points), task_id)
+        return points
 
     @staticmethod
     def _normalize_export_path(export_url: str) -> str:
@@ -416,7 +439,8 @@ class MeterReader:
                 timezone = pytz.timezone(timezone_name)
                 reading = float(read_value)
                 flow = float(flow_value) if flow_value not in (None, "") else None
-            except Exception:
+            except (ValueError, KeyError, pytz.UnknownTimeZoneError):
+                _LOGGER.warning("Skipping unparseable CSV row: %s", row)
                 continue
             points.append(
                 DataPoint(
@@ -442,4 +466,4 @@ class MeterReader:
             return datetime.datetime.fromisoformat(value)
         except ValueError as exc:
             msg = f"Unrecognized export datetime: {value}"
-            raise EyeOnWaterAPIError(msg) from exc
+            raise ValueError(msg) from exc

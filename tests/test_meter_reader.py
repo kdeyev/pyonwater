@@ -235,7 +235,11 @@ async def test_meter_reader_range_export(aiohttp_client: Any) -> None:
     reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
 
     with patch("pyonwater.meter_reader.asyncio.sleep") as sleep_mock:
-        data = await reader.read_historical_data_range_export(client=client, days_to_load=2)
+        data = await reader.read_historical_data_range_export(
+            client=client,
+            days_to_load=2,
+            poll_interval=0.1,
+        )
 
     assert len(data) == 2  # nosec: B101
     assert [point.reading for point in data] == [100.0, 101.5]  # nosec: B101
@@ -258,5 +262,22 @@ def test_normalize_export_path() -> None:
 
 def test_parse_export_datetime_invalid() -> None:
     """Verify invalid export timestamps raise a clear error."""
-    with pytest.raises(EyeOnWaterAPIError, match="Unrecognized export datetime"):
+    with pytest.raises(ValueError, match="Unrecognized export datetime"):
         MeterReader._parse_export_datetime("not-a-date")
+
+
+def test_parse_export_csv_skips_invalid_rows_with_warning(caplog: pytest.LogCaptureFixture) -> None:
+    """Verify malformed export rows are skipped with a warning."""
+    reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+    raw_csv = (
+        "Read_Time,Read,Read_Unit,Flow,Timezone\n"
+        "03/01/2026 12:15 PM,100.0,GAL,,US/Pacific\n"
+        "not-a-date,101.5,GAL,1.25,US/Pacific\n"
+    )
+
+    with caplog.at_level(logging.WARNING, logger="pyonwater.meter_reader"):
+        points = reader._parse_export_csv(raw_csv)
+
+    assert len(points) == 1  # nosec: B101
+    assert points[0].reading == 100.0  # nosec: B101
+    assert "Skipping unparseable CSV row" in caplog.text  # nosec: B101
