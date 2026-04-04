@@ -79,6 +79,30 @@ class Meter:
 
         return historical_data
 
+    async def read_historical_data_range_export(
+        self,
+        client: Client,
+        days_to_load: int,
+        *,
+        include_today: bool = True,
+        export_resolution: str = "hourly",
+        export_unit: str = "Gallons",
+        max_retries: int = 30,
+        poll_interval: float = 2.0,
+    ) -> list[DataPoint]:
+        """Read historical data via the export range API."""
+        historical_data = await self._reader.read_historical_data_range_export(
+            client=client,
+            days_to_load=days_to_load,
+            include_today=include_today,
+            export_resolution=export_resolution,
+            export_unit=export_unit,
+            max_retries=max_retries,
+            poll_interval=poll_interval,
+        )
+
+        return [self.convert_to_native(dp) for dp in historical_data]
+
     @property
     def meter_info(self) -> MeterInfo:
         """Return MeterInfo."""
