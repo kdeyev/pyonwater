@@ -343,3 +343,52 @@ async def test_client_falls_back_to_dashboard_when_new_search_empty(
     assert len(readers) == 1  # nosec: B101
     assert readers[0].meter_uuid == "123"  # nosec: B101
     assert readers[0].meter_id == "456"  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_client_token_expires_after_timeout(aiohttp_client: Any) -> None:
+    """Token should be re-fetched after expiration period."""
+    import datetime
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    websession = await aiohttp_client(app)
+
+    account = Account(eow_hostname="", username="user", password="")  # nosec: B106
+    client = Client(websession=websession, account=account)
+
+    await client.authenticate()
+    assert client.is_token_valid  # nosec: B101
+
+    # Simulate token expiration
+    client.token_expiration = datetime.datetime.now() - datetime.timedelta(minutes=1)
+    assert not client.is_token_valid  # nosec: B101
+
+    # Re-authenticate should succeed
+    await client.authenticate()
+    assert client.is_token_valid  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_client_new_search_ignores_id_as_uuid(aiohttp_client: Any) -> None:
+    """Meters without a real meter_uuid should be skipped, not use _id as fallback."""
+
+    async def mock_new_search_id_only(_request: web.Request) -> web.Response:
+        data = (
+            '{"elastic_results": {"hits": {"hits": ['
+            '{"_id": "es_doc_id", "_source": {"meter_id": "456"}}'
+            "]}}}"
+        )
+        return web.Response(text=data)
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_new_search_id_only)
+    websession = await aiohttp_client(app)
+
+    account = Account(eow_hostname="", username="user", password="")  # nosec: B106
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    readers = await account.fetch_meter_readers_new_search(client=client)
+    assert len(readers) == 0  # nosec: B101

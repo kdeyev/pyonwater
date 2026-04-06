@@ -120,7 +120,6 @@ class Account:
                 meter_obj.get("meter_uuid")
                 or source.get(METER_UUID_FIELD)
                 or source.get("meter.meter_uuid")
-                or hit.get("_id")
             )
             meter_id: str | None = (
                 meter_obj.get("meter_id")

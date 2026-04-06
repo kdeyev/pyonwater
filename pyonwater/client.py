@@ -151,7 +151,10 @@ class Client:
     @property
     def is_token_valid(self) -> bool:
         """Validate the token."""
-        if self.authenticated or (datetime.datetime.now() < self.token_expiration):
-            return True
-
-        return False
+        if not self.authenticated:
+            return False
+        try:
+            return datetime.datetime.now() < self.token_expiration
+        except TypeError:
+            # naive vs aware datetime comparison; treat as expired
+            return False
