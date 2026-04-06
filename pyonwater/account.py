@@ -34,14 +34,39 @@ class Account:
         self.username = username
         self.password = password
 
-    async def fetch_meter_readers(self, client: Client) -> list[MeterReader]:
-        """List the meter readers associated with the account."""
-        new_search_meters = await self._fetch_meter_readers_new_search(client)
-        if new_search_meters:
-            return new_search_meters
+    async def fetch_meter_readers(
+        self,
+        client: Client,
+        *,
+        prefer_new_search: bool = False,
+    ) -> list[MeterReader]:
+        """List the meter readers associated with the account.
 
-        path = DASHBOARD_ENDPOINT + urllib.parse.quote(self.username)
-        data = await client.request(path=path, method="get")
+        Args:
+            client: The authenticated API client.
+            prefer_new_search: When True, try the new_search API first and
+                fall back to the legacy dashboard scrape.  When False
+                (default), use the dashboard first and fall back to
+                new_search.
+        """
+        if prefer_new_search:
+            new_search_meters = await self.fetch_meter_readers_new_search(client)
+            if new_search_meters:
+                return new_search_meters
+            return await self._fetch_meter_readers_dashboard(client)
+
+        dashboard_meters = await self._fetch_meter_readers_dashboard(client)
+        if dashboard_meters:
+            return dashboard_meters
+        return await self.fetch_meter_readers_new_search(client)
+
+    async def _fetch_meter_readers_dashboard(self, client: Client) -> list[MeterReader]:
+        """Fetch meters by scraping the legacy dashboard page."""
+        try:
+            path = DASHBOARD_ENDPOINT + urllib.parse.quote(self.username)
+            data = await client.request(path=path, method="get")
+        except EyeOnWaterAPIError:
+            return []
 
         meters: list[MeterReader] = []
         lines = data.split("\n")
@@ -66,9 +91,7 @@ class Account:
 
         return meters
 
-    async def _fetch_meter_readers_new_search(
-        self, client: Client
-    ) -> list[MeterReader]:
+    async def fetch_meter_readers_new_search(self, client: Client) -> list[MeterReader]:
         """Fetch meters using the API endpoint used by modern EyeOnWater flows."""
         try:
             raw = await client.request(
@@ -111,9 +134,16 @@ class Account:
 
         return meters
 
-    async def fetch_meters(self, client: Client) -> list[Meter]:
+    async def fetch_meters(
+        self,
+        client: Client,
+        *,
+        prefer_new_search: bool = False,
+    ) -> list[Meter]:
         """List the meter states associated with the account."""
-        meter_readers = await self.fetch_meter_readers(client)
+        meter_readers = await self.fetch_meter_readers(
+            client, prefer_new_search=prefer_new_search
+        )
         meters: list[Meter] = []
         for reader in meter_readers:
             meter_info = await reader.read_meter_info(client)

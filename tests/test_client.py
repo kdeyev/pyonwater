@@ -22,7 +22,7 @@ from pyonwater import (
 
 @pytest.mark.asyncio()
 async def test_client(aiohttp_client: Any) -> None:
-    """Basic client test."""
+    """Basic client test — default dashboard-first discovery."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get("/dashboard/user", mock_get_meters_endpoint)
@@ -41,6 +41,27 @@ async def test_client(aiohttp_client: Any) -> None:
     assert client.authenticated is True  # nosec: B101
 
     meters = await account.fetch_meters(client=client)
+    assert len(meters) == 1  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_client_prefer_new_search(aiohttp_client: Any) -> None:
+    """Client test — prefer_new_search=True uses new_search API first."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    websession = await aiohttp_client(app)
+
+    account = Account(  # nosec: B106
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    meters = await account.fetch_meters(client=client, prefer_new_search=True)
     assert len(meters) == 1  # nosec: B101
 
 
@@ -151,7 +172,7 @@ async def test_client_data_401(aiohttp_client: Any) -> None:
 
 @pytest.mark.asyncio()
 async def test_client_data_404(aiohttp_client: Any) -> None:
-    """Test handling 404 errors."""
+    """Test handling 404 errors — both discovery methods fail gracefully."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_post(
@@ -171,8 +192,8 @@ async def test_client_data_404(aiohttp_client: Any) -> None:
 
     assert client.authenticated is True  # nosec: B101
 
-    with pytest.raises(EyeOnWaterException):
-        await account.fetch_meters(client=client)
+    meters = await account.fetch_meters(client=client)
+    assert len(meters) == 0  # nosec: B101
 
 
 @pytest.mark.asyncio()
@@ -227,8 +248,10 @@ async def test_client_truncates_long_error_payload(aiohttp_client: Any) -> None:
     client = Client(websession=websession, account=account)
     await client.authenticate()
 
-    with pytest.raises(EyeOnWaterException):  # nosec: B101
-        await account.fetch_meter_readers(client=client)
+    # Dashboard 503 is caught; both discovery methods return empty.
+    # The truncation still fires (visible in captured log output).
+    readers = await account.fetch_meter_readers(client=client)
+    assert len(readers) == 0  # nosec: B101
 
 
 @pytest.mark.asyncio()
@@ -258,17 +281,45 @@ async def test_client_new_search_nested_meter_payload(aiohttp_client: Any) -> No
     client = Client(websession=websession, account=account)
     await client.authenticate()
 
-    readers = await account.fetch_meter_readers(client=client)
+    readers = await account.fetch_meter_readers(client=client, prefer_new_search=True)
     assert len(readers) == 1  # nosec: B101
     assert readers[0].meter_uuid == "nested_uuid"  # nosec: B101
     assert readers[0].meter_id == "12345"  # nosec: B101
 
 
 @pytest.mark.asyncio()
+async def test_client_falls_back_to_new_search_when_dashboard_empty(
+    aiohttp_client: Any,
+) -> None:
+    """Test new_search fallback when dashboard returns no meters (default order)."""
+
+    async def mock_dashboard_empty(_request: web.Request) -> web.Response:
+        return web.Response(text="no meter info here")
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/dashboard/user", mock_dashboard_empty)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    websession = await aiohttp_client(app)
+
+    account = Account(  # nosec: B106
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+
+    client = Client(websession=websession, account=account)
+    await client.authenticate()
+
+    readers = await account.fetch_meter_readers(client=client)
+    assert len(readers) == 1  # nosec: B101
+
+
+@pytest.mark.asyncio()
 async def test_client_falls_back_to_dashboard_when_new_search_empty(
     aiohttp_client: Any,
 ) -> None:
-    """Test dashboard fallback when new_search has no parseable meters."""
+    """Test dashboard fallback when new_search empty (prefer_new_search=True)."""
 
     async def mock_new_search_empty(_request: web.Request) -> web.Response:
         return web.Response(text='{"elastic_results": {"hits": {"hits": []}}}')
@@ -288,7 +339,7 @@ async def test_client_falls_back_to_dashboard_when_new_search_empty(
     client = Client(websession=websession, account=account)
     await client.authenticate()
 
-    readers = await account.fetch_meter_readers(client=client)
+    readers = await account.fetch_meter_readers(client=client, prefer_new_search=True)
     assert len(readers) == 1  # nosec: B101
     assert readers[0].meter_uuid == "123"  # nosec: B101
     assert readers[0].meter_id == "456"  # nosec: B101
