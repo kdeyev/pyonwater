@@ -16,9 +16,9 @@ from tenacity import (
 )
 
 from .exceptions import (
+    EyeOnWaterAPIError,
     EyeOnWaterAuthError,
     EyeOnWaterAuthExpired,
-    EyeOnWaterException,
     EyeOnWaterRateLimitError,
 )
 
@@ -110,7 +110,7 @@ class Client:
                 self._truncate_payload(data),
             )
             msg = f"Request failed: {resp.status} {data}"
-            raise EyeOnWaterException(msg)
+            raise EyeOnWaterAPIError(msg)
 
         return data
 
