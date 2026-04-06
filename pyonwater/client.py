@@ -82,6 +82,7 @@ class Client:
     ) -> str:
         """Make API calls against the eow API."""
         await self.authenticate()
+        _LOGGER.debug("%s %s", method.upper(), path)
         resp = await self.websession.request(
             method,
             f"{self.base_url}{path}",
@@ -100,6 +101,7 @@ class Client:
             raise EyeOnWaterAuthExpired
 
         self._update_token_expiration()
+        _LOGGER.debug("Response: %s (%d bytes)", resp.status, resp.content_length or 0)
 
         data: str = await resp.text()
 
@@ -117,7 +119,10 @@ class Client:
     async def authenticate(self) -> None:
         """Authenticate the client."""
         if not self.is_token_valid:
-            _LOGGER.debug("Requesting login token")
+            _LOGGER.debug(
+                "Token expired (authenticated=%s), re-authenticating",
+                self.authenticated,
+            )
 
             resp = await self.websession.request(
                 "POST",

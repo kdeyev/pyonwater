@@ -13,6 +13,10 @@ from .meter_reader import MeterReader
 if TYPE_CHECKING:  # pragma: no cover
     from .client import Client
 
+import logging
+
+_LOGGER = logging.getLogger(__name__)
+
 DASHBOARD_ENDPOINT = "/dashboard/"
 NEW_SEARCH_ENDPOINT = "/api/2/residential/new_search"
 METER_UUID_FIELD = "meter_uuid"
@@ -50,14 +54,28 @@ class Account:
                 new_search.
         """
         if prefer_new_search:
+            _LOGGER.debug("Discovery: trying new_search first")
             new_search_meters = await self.fetch_meter_readers_new_search(client)
             if new_search_meters:
+                _LOGGER.debug(
+                    "Discovery: new_search found %d meter(s)", len(new_search_meters)
+                )
                 return new_search_meters
+            _LOGGER.debug(
+                "Discovery: new_search returned nothing, falling back to dashboard"
+            )
             return await self._fetch_meter_readers_dashboard(client)
 
+        _LOGGER.debug("Discovery: trying dashboard first")
         dashboard_meters = await self._fetch_meter_readers_dashboard(client)
         if dashboard_meters:
+            _LOGGER.debug(
+                "Discovery: dashboard found %d meter(s)", len(dashboard_meters)
+            )
             return dashboard_meters
+        _LOGGER.debug(
+            "Discovery: dashboard returned nothing, falling back to new_search"
+        )
         return await self.fetch_meter_readers_new_search(client)
 
     async def _fetch_meter_readers_dashboard(self, client: Client) -> list[MeterReader]:
