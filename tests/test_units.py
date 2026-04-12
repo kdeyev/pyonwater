@@ -36,6 +36,11 @@ def test_deduce_native_unit():
         assert deduce_native_units(bad_unit)
 
 
+def test_deduce_native_unit_10_cf():
+    """UNIT_10_CF maps to NativeUnits.CF — previously untested branch."""
+    assert deduce_native_units(EOWUnits.UNIT_10_CF) == NativeUnits.CF
+
+
 def test_convert_units():
     """Test units conversion."""
     assert convert_to_native(NativeUnits.GAL, EOWUnits.UNIT_GAL, 1.0) == 1.0

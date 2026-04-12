@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from aiohttp import web
 from conftest import (
@@ -21,6 +21,7 @@ from pyonwater import (
     EOWUnits,
     EyeOnWaterException,
     EyeOnWaterUnitError,
+    MeterReader,
     NativeUnits,
 )
 
@@ -361,3 +362,113 @@ async def test_meter_convert_to_native_preserves_flow_and_end_dt(
     assert converted.reading == 100.0
     assert converted.flow_value == 200.0
     assert converted.end_dt == end_dt
+
+
+async def test_meter_cache_keeps_newer_data(aiohttp_client: Any) -> None:
+    """Cache is not overwritten when incoming data has an older timestamp."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    meter = await build_meter(client)
+
+    newer_point = DataPoint(
+        dt=datetime(2026, 3, 2, tzinfo=timezone.utc),
+        reading=200.0,
+        unit=EOWUnits.UNIT_GAL,
+    )
+    older_point = DataPoint(
+        dt=datetime(2026, 3, 1, tzinfo=timezone.utc),
+        reading=100.0,
+        unit=EOWUnits.UNIT_GAL,
+    )
+
+    with patch.object(
+        MeterReader,
+        "read_historical_data",
+        new=AsyncMock(side_effect=[[newer_point], [older_point]]),
+    ):
+        await meter.read_historical_data(client=client, days_to_load=1)
+        first_dt = meter.last_historical_data[0].dt
+        first_reading = meter.last_historical_data[0].reading
+
+        # Second read returns older data — cache must NOT be overwritten
+        await meter.read_historical_data(client=client, days_to_load=1)
+
+    assert meter.last_historical_data[0].dt == first_dt
+    assert meter.last_historical_data[0].reading == first_reading
+
+
+async def test_meter_cache_not_updated_for_same_timestamp(aiohttp_client: Any) -> None:
+    """Cache is not overwritten when same-timestamp data with equal count arrives."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    meter = await build_meter(client)
+
+    point = DataPoint(
+        dt=datetime(2026, 3, 1, tzinfo=timezone.utc),
+        reading=100.0,
+        unit=EOWUnits.UNIT_GAL,
+    )
+
+    with patch.object(
+        MeterReader,
+        "read_historical_data",
+        new=AsyncMock(side_effect=[[point], [point]]),
+    ):
+        await meter.read_historical_data(client=client, days_to_load=1)
+        assert len(meter.last_historical_data) == 1
+        first_list_id = id(meter.last_historical_data)
+
+        # Second read: same timestamp, same count — list must NOT be reassigned
+        await meter.read_historical_data(client=client, days_to_load=1)
+
+    # id() identity check: self.last_historical_data = historical_data was NOT executed
+    assert id(meter.last_historical_data) == first_list_id
+
+
+async def test_meter_read_include_today_false(aiohttp_client: Any) -> None:
+    """include_today=False: end_date is yesterday, start_date is (days_to_load-1) days earlier."""
+    captured_params: dict[str, str] = {}
+
+    async def mock_initiate(request: web.Request) -> web.Response:
+        captured_params.update(dict(request.query))
+        return web.Response(text='{"task_id":"task-x"}')
+
+    async def mock_status(_request: web.Request) -> web.Response:
+        return web.Response(text='{"state":"done","result":{"url":"/export/dl.csv"}}')
+
+    async def mock_csv(_request: web.Request) -> web.Response:
+        return web.Response(text="Read_Time,Read,Read_Unit,Flow,Timezone\n")
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/reports/export_initiate", mock_initiate)
+    app.router.add_get("/reports/export_check_status/task-x", mock_status)
+    app.router.add_get("/export/dl.csv", mock_csv)
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+
+    # Fix "today" to 2026-03-10 so date assertions are deterministic.
+    # Patching datetime.datetime only; datetime.timedelta remains the real class.
+    fixed_now = datetime(2026, 3, 10, 12, 0, 0, tzinfo=timezone.utc)
+    with patch("pyonwater.meter_reader.datetime.datetime") as mock_dt:
+        mock_dt.now.return_value = fixed_now
+        with patch("pyonwater.meter_reader.asyncio.sleep"):
+            await reader.read_historical_data_range_export(
+                client=client,
+                days_to_load=3,
+                include_today=False,
+                poll_interval=0.0,
+            )
+
+    # include_today=False, today=2026-03-10:
+    #   end_date   = 2026-03-09  (today - 1)
+    #   start_date = 2026-03-07  (end_date - (3-1) days)
+    assert captured_params["end-date"] == "03/09/2026"
+    assert captured_params["start-date"] == "03/07/2026"

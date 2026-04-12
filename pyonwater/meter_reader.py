@@ -321,7 +321,7 @@ class MeterReader:
             end_date = today - datetime.timedelta(days=1)
             start_date = end_date - datetime.timedelta(days=max(days_to_load - 1, 0))
 
-        params = {
+        params: dict[str, str | int] = {
             "export_unit": export_unit,
             "site": "residential",
             "export_resolution": export_resolution,
@@ -368,12 +368,12 @@ class MeterReader:
             msg = f"Export result missing URL: {status}"
             raise EyeOnWaterAPIError(msg)
 
-        export_path = self._normalize_export_path(result["url"])
+        export_path = self.normalize_export_path(cast(str, result["url"]))
         raw_csv = await client.request(path=export_path, method="get")
         _LOGGER.debug(
             "Downloaded export CSV for task %s: %d bytes", task_id, len(raw_csv)
         )
-        points = self._parse_export_csv(raw_csv)
+        points = self.parse_export_csv(raw_csv)
         _LOGGER.debug("Parsed %d export data points for task %s", len(points), task_id)
         return points
 
@@ -418,7 +418,7 @@ class MeterReader:
         raise EyeOnWaterAPIError(msg)
 
     @staticmethod
-    def _normalize_export_path(export_url: str) -> str:
+    def normalize_export_path(export_url: str) -> str:
         """Normalize export URLs into a request path."""
         if export_url.startswith("/"):
             return export_url
@@ -432,7 +432,7 @@ class MeterReader:
         msg = f"Unsupported export url format: {export_url}"
         raise EyeOnWaterAPIError(msg)
 
-    def _parse_export_csv(self, raw_csv: str) -> list[DataPoint]:
+    def parse_export_csv(self, raw_csv: str) -> list[DataPoint]:
         """Parse range export CSV into data points."""
         if not raw_csv:
             return []
@@ -448,10 +448,13 @@ class MeterReader:
             if not read_time or read_value is None or not read_unit:
                 continue
             try:
-                dt_value = self._parse_export_datetime(read_time)
+                dt_value = self.parse_export_datetime(read_time)
                 timezone = pytz.timezone(timezone_name)
                 reading = float(read_value)
-                flow = float(flow_value) if flow_value not in (None, "") else None  # type: ignore[arg-type]
+                flow_str = (
+                    flow_value if isinstance(flow_value, str) and flow_value else None
+                )
+                flow = float(flow_str) if flow_str is not None else None
             except (ValueError, KeyError, pytz.UnknownTimeZoneError):
                 _LOGGER.warning("Skipping unparsable CSV row: %s", row)
                 continue
@@ -468,7 +471,7 @@ class MeterReader:
         return points
 
     @staticmethod
-    def _parse_export_datetime(value: str) -> datetime.datetime:
+    def parse_export_datetime(value: str) -> datetime.datetime:
         """Parse export timestamps with the formats observed in EOW exports."""
         for fmt in ("%m/%d/%Y %H:%M", "%m/%d/%Y %I:%M %p"):
             try:
