@@ -718,3 +718,70 @@ async def test_fetch_meters_raises_when_every_meter_fails(
 
     with pytest.raises(EyeOnWaterAPIError):
         await account.fetch_meters(client=client)
+
+
+# ---------------------------------------------------------------------------
+# Diagnostics: logs must describe what actually happened
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio()
+async def test_response_log_reports_real_body_size(
+    aiohttp_client: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Chunked responses must log their real size, not 0 bytes.
+
+    aiohttp reports content_length as None for chunked responses, which made
+    a full login page look like an empty body (kdeyev/eyeonwater#180).
+    """
+    body = "x" * 4096
+
+    async def chunked(_request: web.Request) -> web.Response:
+        response = web.StreamResponse()
+        # No content-length -> aiohttp streams the body chunked.
+        await response.prepare(_request)
+        await response.write(body.encode())
+        await response.write_eof()
+        return response
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/dashboard/user", chunked)
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+
+    with caplog.at_level(logging.DEBUG, logger="pyonwater.client"):
+        await client.request("/dashboard/user", "get")
+
+    assert f"Response: 200 ({len(body)} bytes)" in caplog.text  # nosec: B101
+    assert "(0 bytes)" not in caplog.text  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_signin_log_does_not_claim_success(
+    aiohttp_client: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Sign-in logging reports the outcome instead of asserting success.
+
+    The endpoint answers 200 with the login page when credentials are not
+    accepted, so a hardcoded "success" line is actively misleading.
+    """
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    websession = await aiohttp_client(app)
+
+    account = Account(  # nosec: B106
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+    client = Client(websession=websession, account=account)
+
+    with caplog.at_level(logging.DEBUG, logger="pyonwater.client"):
+        await client.authenticate()
+
+    assert "Successfully retrieved login token" not in caplog.text  # nosec: B101
+    assert "Sign-in POST completed" in caplog.text  # nosec: B101
+    assert "final_url=" in caplog.text  # nosec: B101
