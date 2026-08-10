@@ -31,10 +31,22 @@ class Meter:
         self._reading_data: Reading | None = None
         self._meter_info: MeterInfo | None = meter_info
         self._reading_data = self._meter_info.reading
+        self._sync_reader_timezone()
 
         self._native_unit_of_measurement = deduce_native_units(
             self._meter_info.reading.latest_read.units
         )
+
+    def _sync_reader_timezone(self) -> None:
+        """Feed the meter timezone reported by the API into the reader.
+
+        The reader needs it to decide which calendar day is "today".  Only
+        overwrite when the API actually reports one, so an explicitly
+        configured timezone is not clobbered by a missing field.
+        """
+        meter_data = self._meter_info.meter if self._meter_info else None
+        if meter_data and meter_data.timezone:
+            self._reader.timezone = meter_data.timezone
 
     @property
     def meter_uuid(self) -> str:
@@ -55,6 +67,7 @@ class Meter:
         """Read the latest meter info."""
         self._meter_info = await self._reader.read_meter_info(client)
         self._reading_data = self._meter_info.reading
+        self._sync_reader_timezone()
 
     async def read_historical_data(
         self, client: Client, days_to_load: int

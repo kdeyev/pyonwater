@@ -35,12 +35,20 @@ _LOGGER = logging.getLogger(__name__)
 class MeterReader:
     """Class represents meter reader."""
 
-    def __init__(self, meter_uuid: str, meter_id: str) -> None:
+    def __init__(
+        self,
+        meter_uuid: str,
+        meter_id: str,
+        timezone: str | None = None,
+    ) -> None:
         """Initialize the meter.
 
         Args:
             meter_uuid: The unique identifier for the meter (cannot be empty).
             meter_id: The meter ID (cannot be empty).
+            timezone: Olson/IANA name of the meter timezone (e.g. "US/Central").
+                Used to decide which calendar day is "today" when requesting
+                historical data.  Falls back to UTC when omitted or unknown.
 
         Raises:
             ValueError: If meter_uuid or meter_id is empty/None.
@@ -54,6 +62,25 @@ class MeterReader:
 
         self.meter_uuid = meter_uuid.strip()
         self.meter_id: str = meter_id.strip()
+        self.timezone: str | None = timezone
+
+    def _tzinfo(self) -> datetime.tzinfo:
+        """Return the meter timezone, falling back to UTC.
+
+        The meter timezone decides which calendar day is "today".  Using UTC
+        for a meter west of Greenwich requests tomorrow's (empty) data late in
+        the local day; for a meter east of Greenwich it never requests today.
+        """
+        if self.timezone:
+            try:
+                return pytz.timezone(self.timezone)
+            except pytz.UnknownTimeZoneError:
+                _LOGGER.warning(
+                    "Unknown meter timezone %r for meter %s - falling back to UTC",
+                    self.timezone,
+                    self.meter_uuid,
+                )
+        return pytz.UTC
 
     async def read_meter_info(self, client: Client) -> MeterInfo:
         """Triggers an on-demand meter read and returns it when complete."""
@@ -98,7 +125,7 @@ class MeterReader:
             msg = f"days_to_load must be at least 1, got {days_to_load}"
             raise ValueError(msg)
 
-        today = datetime.datetime.now(tz=pytz.UTC).replace(
+        today = datetime.datetime.now(tz=self._tzinfo()).replace(
             hour=0,
             minute=0,
             second=0,
@@ -308,7 +335,7 @@ class MeterReader:
             msg = f"poll_interval must be non-negative, got {poll_interval}"
             raise ValueError(msg)
 
-        today = datetime.datetime.now(tz=pytz.UTC).replace(
+        today = datetime.datetime.now(tz=self._tzinfo()).replace(
             hour=0,
             minute=0,
             second=0,
