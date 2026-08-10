@@ -101,9 +101,13 @@ class Client:
             raise EyeOnWaterAuthExpired
 
         self._update_token_expiration()
-        _LOGGER.debug("Response: %s (%d bytes)", resp.status, resp.content_length or 0)
 
         data: str = await resp.text()
+
+        # Log the real body size: resp.content_length is None for chunked
+        # responses, which made large bodies look like "0 bytes" and hid the
+        # fact that a login page was being returned (kdeyev/eyeonwater#180).
+        _LOGGER.debug("Response: %s (%d bytes)", resp.status, len(data))
 
         if resp.status != 200:
             _LOGGER.error(
@@ -145,7 +149,15 @@ class Client:
             self.cookies = resp.cookies
             self._update_token_expiration()
             self.authenticated = True
-            _LOGGER.debug("Successfully retrieved login token")
+            # Do not claim success outright: the sign-in endpoint answers 200
+            # with the login page when credentials are not accepted, so the
+            # final URL is the useful diagnostic (kdeyev/eyeonwater#180).
+            _LOGGER.debug(
+                "Sign-in POST completed: status=%s, final_url=%s, cookies=%s",
+                resp.status,
+                resp.url,
+                sorted(resp.cookies.keys()),
+            )
 
     def extract_json(self, line: str, prefix: str) -> list[dict[str, Any]]:
         """Extract JSON response."""
