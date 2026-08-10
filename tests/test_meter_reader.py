@@ -658,3 +658,176 @@ async def test_read_historical_data_one_day_units_forwarded(
     )
 
     assert captured_body["params"]["units"] == RequestUnits.GALLONS.value  # nosec: B101
+
+
+# ---------------------------------------------------------------------------
+# Meter timezone drives which calendar day is "today" (issue #59)
+# ---------------------------------------------------------------------------
+
+
+def _now_honoring_tz(instant: datetime.datetime) -> Any:
+    """Build a datetime.now() replacement that respects its tz argument.
+
+    The production code calls ``datetime.now(tz=...)``; a plain return_value
+    mock would ignore the timezone and defeat the purpose of these tests.
+    """
+
+    def now(tz: datetime.tzinfo | None = None) -> datetime.datetime:
+        return instant.astimezone(tz) if tz is not None else instant
+
+    return now
+
+
+def _capture_requested_dates(dates: list[str]) -> Any:
+    """Consumption endpoint that records the requested date and returns no data."""
+
+    async def mock_consumption(request: web.Request) -> web.Response:
+        payload = await request.json()
+        dates.append(payload["params"]["date"])
+        return web.Response(text="")
+
+    return mock_consumption
+
+
+async def _requested_dates_for(
+    aiohttp_client: Any,
+    instant: datetime.datetime,
+    timezone_name: str | None,
+    days_to_load: int = 1,
+) -> list[str]:
+    """Return the date params requested at a frozen instant for a timezone."""
+    dates: list[str] = []
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post(
+        "/api/2/residential/consumption", _capture_requested_dates(dates)
+    )
+
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    reader = MeterReader(
+        meter_uuid="meter_uuid",
+        meter_id="meter_id",
+        timezone=timezone_name,
+    )
+
+    with patch("pyonwater.meter_reader.datetime.datetime") as mock_dt:
+        mock_dt.now.side_effect = _now_honoring_tz(instant)
+        await reader.read_historical_data(client=client, days_to_load=days_to_load)
+
+    return dates
+
+
+# 2026-07-02 01:00 UTC is still 2026-07-01 20:00 in America/Chicago.
+_EVENING_IN_CHICAGO = datetime.datetime(2026, 7, 2, 1, 0, tzinfo=datetime.timezone.utc)
+# 2026-07-01 22:00 UTC is already 2026-07-02 08:00 in Australia/Sydney.
+_MORNING_IN_SYDNEY = datetime.datetime(2026, 7, 1, 22, 0, tzinfo=datetime.timezone.utc)
+
+
+@pytest.mark.asyncio()
+async def test_historical_today_uses_timezone_west_of_utc(
+    aiohttp_client: Any,
+) -> None:
+    """West of UTC late in the day, "today" must not roll over to tomorrow.
+
+    At 20:00 on Jul 1 in America/Chicago, UTC already reads Jul 2. Requesting
+    Jul 2 returns an empty response and today's readings are silently skipped.
+    """
+    dates = await _requested_dates_for(
+        aiohttp_client, _EVENING_IN_CHICAGO, "America/Chicago"
+    )
+
+    assert dates == ["07/01/2026"]  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_historical_today_uses_timezone_east_of_utc(
+    aiohttp_client: Any,
+) -> None:
+    """East of UTC early in the day, "today" must not lag behind.
+
+    At 08:00 on Jul 2 in Australia/Sydney, UTC still reads Jul 1, so today
+    would never be requested at all.
+    """
+    dates = await _requested_dates_for(
+        aiohttp_client, _MORNING_IN_SYDNEY, "Australia/Sydney"
+    )
+
+    assert dates == ["07/02/2026"]  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_historical_today_defaults_to_utc(aiohttp_client: Any) -> None:
+    """Without a meter timezone the reader keeps the previous UTC behavior."""
+    dates = await _requested_dates_for(aiohttp_client, _EVENING_IN_CHICAGO, None)
+
+    assert dates == ["07/02/2026"]  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_historical_today_unknown_timezone_falls_back_to_utc(
+    aiohttp_client: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An unusable timezone falls back to UTC instead of raising.
+
+    The API reports abbreviations such as "CDT" in some payloads, which pytz
+    cannot resolve.
+    """
+    with caplog.at_level(logging.WARNING, logger="pyonwater.meter_reader"):
+        dates = await _requested_dates_for(aiohttp_client, _EVENING_IN_CHICAGO, "CDT")
+
+    assert dates == ["07/02/2026"]  # nosec: B101
+    assert "Unknown meter timezone" in caplog.text  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_historical_multiple_days_use_timezone(aiohttp_client: Any) -> None:
+    """The whole requested window shifts with the meter timezone."""
+    dates = await _requested_dates_for(
+        aiohttp_client, _EVENING_IN_CHICAGO, "America/Chicago", days_to_load=3
+    )
+
+    assert dates == ["06/29/2026", "06/30/2026", "07/01/2026"]  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_export_range_uses_meter_timezone(aiohttp_client: Any) -> None:
+    """The export range endpoints derive their dates from the meter timezone."""
+    captured_params: dict[str, str] = {}
+
+    async def mock_initiate(request: web.Request) -> web.Response:
+        captured_params.update(dict(request.query))
+        return web.Response(text='{"task_id":"task-tz"}')
+
+    async def mock_status(_request: web.Request) -> web.Response:
+        return web.Response(text='{"state":"done","result":{"url":"/export/dl.csv"}}')
+
+    async def mock_csv(_request: web.Request) -> web.Response:
+        return web.Response(text="Read_Time,Read,Read_Unit,Flow,Timezone\n")
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/reports/export_initiate", mock_initiate)
+    app.router.add_get("/reports/export_check_status/task-tz", mock_status)
+    app.router.add_get("/export/dl.csv", mock_csv)
+
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    reader = MeterReader(
+        meter_uuid="meter_uuid",
+        meter_id="meter_id",
+        timezone="America/Chicago",
+    )
+
+    with patch("pyonwater.meter_reader.datetime.datetime") as mock_dt:
+        mock_dt.now.side_effect = _now_honoring_tz(_EVENING_IN_CHICAGO)
+        await reader.read_historical_data_range_export(
+            client=client,
+            days_to_load=3,
+            poll_interval=0.0,
+        )
+
+    assert captured_params["end-date"] == "07/01/2026"  # nosec: B101
+    assert captured_params["start-date"] == "06/29/2026"  # nosec: B101
