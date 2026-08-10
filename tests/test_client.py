@@ -7,7 +7,7 @@ import logging
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-from aiohttp import web
+from aiohttp import DummyCookieJar, web
 from conftest import (
     add_error_decorator,
     build_client,
@@ -785,3 +785,107 @@ async def test_signin_log_does_not_claim_success(
     assert "Successfully retrieved login token" not in caplog.text  # nosec: B101
     assert "Sign-in POST completed" in caplog.text  # nosec: B101
     assert "final_url=" in caplog.text  # nosec: B101
+
+
+# ---------------------------------------------------------------------------
+# Cookie handling and URL construction
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio()
+async def test_session_cookie_is_read_from_the_jar(
+    aiohttp_client: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Session cookies are reported from the jar, not from the final response.
+
+    EyeOnWater sets its session cookie on an intermediate redirect, so the
+    final response carries no Set-Cookie header and `resp.cookies` is empty
+    (kdeyev/eyeonwater#180).  This mirrors that shape: the cookie is set on the
+    302 and the landing page sets nothing, so a jar lookup is the only way to
+    see it.
+    """
+
+    async def signin_redirects(_request: web.Request) -> web.Response:
+        response = web.HTTPFound("/landing")
+        response.set_cookie("aqua5001_prod_session", "abc123")
+        raise response
+
+    async def landing(_request: web.Request) -> web.Response:
+        return web.Response(text="ok")
+
+    app = web.Application()
+    app.router.add_post("/account/signin", signin_redirects)
+    app.router.add_get("/landing", landing)
+    websession = await aiohttp_client(app)
+
+    account = Account(  # nosec: B106
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+    client = Client(websession=websession, account=account)
+
+    with caplog.at_level(logging.DEBUG, logger="pyonwater.client"):
+        await client.authenticate()
+
+    assert "aqua5001_prod_session" in caplog.text  # nosec: B101
+    # The jar holds it, so the "cannot store cookies" warning must not fire.
+    assert "No session cookie was stored" not in caplog.text  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_warns_when_session_cannot_store_cookies(
+    aiohttp_client: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A session that discards cookies is called out explicitly.
+
+    Every request would silently go out unauthenticated otherwise.
+    """
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    websession = await aiohttp_client(app, cookie_jar=DummyCookieJar())
+
+    account = Account(  # nosec: B106
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+    client = Client(websession=websession, account=account)
+
+    with caplog.at_level(logging.WARNING, logger="pyonwater.client"):
+        await client.authenticate()
+
+    assert "No session cookie was stored" in caplog.text  # nosec: B101
+
+
+def test_build_url_collapses_double_slashes() -> None:
+    """base_url and leading-slash endpoints must not produce `host//path`."""
+    account = Account(  # nosec: B106
+        eow_hostname="eyeonwater.com",
+        username="user",
+        password="",
+    )
+    client = Client(websession=MagicMock(), account=account)
+
+    assert (  # nosec: B101
+        client._build_url("/api/2/residential/new_search")
+        == "https://eyeonwater.com/api/2/residential/new_search"
+    )
+    assert (  # nosec: B101
+        client._build_url("account/signin") == "https://eyeonwater.com/account/signin"
+    )
+
+
+def test_build_url_without_hostname_keeps_relative_path() -> None:
+    """An empty hostname yields a root-relative path, as the tests rely on."""
+    account = Account(  # nosec: B106
+        eow_hostname="",
+        username="user",
+        password="",
+    )
+    client = Client(websession=MagicMock(), account=account)
+
+    assert client._build_url("/dashboard/user") == "/dashboard/user"  # nosec: B101
+    assert client._build_url("account/signin") == "/account/signin"  # nosec: B101
