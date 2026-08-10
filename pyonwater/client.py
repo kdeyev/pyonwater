@@ -14,6 +14,7 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential_jitter,
 )
+from yarl import URL
 
 from .exceptions import (
     EyeOnWaterAPIError,
@@ -52,11 +53,39 @@ class Client:
         self.username = account.username
         self.password = account.password
         self.websession = websession
-        self.cookies = None
         self.authenticated = False
         self.token_expiration = datetime.datetime.now()
         self.user_agent = None
         self.timeout = timeout or DEFAULT_TIMEOUT
+
+    def _build_url(self, path: str) -> str:
+        """Join base_url and path with exactly one separating slash.
+
+        base_url carries a trailing slash while most endpoint constants carry a
+        leading one, which produced URLs like ``https://host//api/...``.  The
+        server tolerates that, but it should not be relied on.
+        """
+        return f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
+
+    def _session_cookie_names(self, url: URL) -> list[str] | None:
+        """Return the names of session cookies the jar holds for ``url``.
+
+        Authentication state lives in the ``ClientSession`` cookie jar, not on
+        this object: the session cookie is set on an intermediate redirect, so
+        the final response carries no ``Set-Cookie`` at all and ``resp.cookies``
+        is always empty (kdeyev/eyeonwater#180).
+
+        Returns None when the session does not expose a jar, in which case no
+        conclusion can be drawn either way.
+        """
+        jar = getattr(self.websession, "cookie_jar", None)
+        if jar is None:
+            # aiohttp's TestClient proxies requests and keeps the real session
+            # (and therefore the jar) one level down.
+            jar = getattr(getattr(self.websession, "session", None), "cookie_jar", None)
+        if jar is None:
+            return None
+        return sorted(jar.filter_cookies(url).keys())
 
     def _truncate_payload(self, payload: str) -> str:
         if len(payload) <= MAX_LOG_PAYLOAD:
@@ -85,8 +114,7 @@ class Client:
         _LOGGER.debug("%s %s", method.upper(), path)
         resp = await self.websession.request(
             method,
-            f"{self.base_url}{path}",
-            cookies=self.cookies,
+            self._build_url(path),
             timeout=self.timeout,
             **kwargs,
         )
@@ -130,7 +158,7 @@ class Client:
 
             resp = await self.websession.request(
                 "POST",
-                f"{self.base_url}{AUTH_ENDPOINT}",
+                self._build_url(AUTH_ENDPOINT),
                 data={
                     "username": self.username,
                     "password": self.password,
@@ -146,18 +174,30 @@ class Client:
                 msg = "Reached ratelimit"
                 raise EyeOnWaterRateLimitError(msg)
 
-            self.cookies = resp.cookies
             self._update_token_expiration()
             self.authenticated = True
+
             # Do not claim success outright: the sign-in endpoint answers 200
             # with the login page when credentials are not accepted, so the
             # final URL is the useful diagnostic (kdeyev/eyeonwater#180).
+            session_cookies = self._session_cookie_names(resp.url)
             _LOGGER.debug(
-                "Sign-in POST completed: status=%s, final_url=%s, cookies=%s",
+                "Sign-in POST completed: status=%s, final_url=%s, session_cookies=%s",
                 resp.status,
                 resp.url,
-                sorted(resp.cookies.keys()),
+                session_cookies if session_cookies is not None else "<unavailable>",
             )
+            if session_cookies is not None and not session_cookies:
+                # Not a signal about credentials - EOW issues a session cookie
+                # even for anonymous visitors.  An empty jar means the caller
+                # supplied a session that cannot store cookies, in which case
+                # every subsequent request goes out unauthenticated.
+                _LOGGER.warning(
+                    "No session cookie was stored for %s. If the ClientSession "
+                    "was created with a DummyCookieJar, requests will be "
+                    "unauthenticated.",
+                    self.base_url or "the configured host",
+                )
 
     def extract_json(self, line: str, prefix: str) -> list[dict[str, Any]]:
         """Extract JSON response."""
