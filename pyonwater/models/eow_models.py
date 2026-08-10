@@ -285,10 +285,11 @@ class Flags(BaseModel):
 
 class Reading(BaseModel):
     # Mandatory fields
-    flags: Flags
     latest_read: LatestRead
 
     # Optional fields
+    # Some meters omit "flags" from register_0 entirely (kdeyev/eyeonwater#179).
+    flags: Optional[Flags] = None
     leak: Optional["LeakStatus"] = None
     battery: Optional[Battery] = None
     customer_uuid: Optional[str] = None

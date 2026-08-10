@@ -166,6 +166,26 @@ def test_meter_info_minimal_payload_parses() -> None:
     assert model.leak is None
 
 
+def test_meter_info_without_flags_parses() -> None:
+    """register_0 without a 'flags' key parses; flags defaults to None.
+
+    Some meters omit flags entirely (kdeyev/eyeonwater#179); this must not
+    fail validation and take down the whole integration setup.
+    """
+    model = MeterInfo.model_validate(
+        {"register_0": {"latest_read": _MINIMAL_LATEST_READ}}
+    )
+    assert model.reading.flags is None
+    assert model.reading.latest_read.full_read == 0.0
+
+
+def test_meter_info_with_flags_still_parses() -> None:
+    """A payload that does include flags still populates the model."""
+    model = MeterInfo.model_validate({"register_0": _MINIMAL_REGISTER_0})
+    assert model.reading.flags is not None
+    assert model.reading.flags.leak is False
+
+
 # ---------------------------------------------------------------------------
 # Group D — HistoricalData structure
 # ---------------------------------------------------------------------------
