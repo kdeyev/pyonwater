@@ -1,6 +1,7 @@
 """Tests for pyonwater meter."""
 
 from datetime import datetime, timedelta, timezone
+import json
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
@@ -21,6 +22,7 @@ from pyonwater import (
     EOWUnits,
     EyeOnWaterException,
     EyeOnWaterUnitError,
+    Meter,
     MeterReader,
     NativeUnits,
 )
@@ -472,3 +474,59 @@ async def test_meter_read_include_today_false(aiohttp_client: Any) -> None:
     #   start_date = 2026-03-07  (end_date - (3-1) days)
     assert captured_params["end-date"] == "03/09/2026"
     assert captured_params["start-date"] == "03/07/2026"
+
+
+async def test_meter_propagates_timezone_to_reader(aiohttp_client: Any) -> None:
+    """The meter timezone reported by the API reaches the reader.
+
+    The fixture reports "US/Central", which the reader needs to decide which
+    calendar day is "today".
+    """
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    websession = await aiohttp_client(app)
+
+    _, client = await build_client(websession)
+    reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+    assert reader.timezone is None  # nosec: B101
+
+    meter_info = await reader.read_meter_info(client)
+    meter = Meter(reader, meter_info)
+
+    assert reader.timezone == "US/Central"  # nosec: B101
+
+    reader.timezone = "UTC"
+    await meter.read_meter_info(client)
+    assert reader.timezone == "US/Central"  # nosec: B101
+
+
+async def test_meter_keeps_configured_timezone_when_api_omits_it(
+    aiohttp_client: Any,
+) -> None:
+    """A configured timezone survives meter info without a timezone field."""
+
+    async def mock_no_timezone(_request: web.Request) -> web.Response:
+        with open(
+            "tests/mock_data/read_meter_mock_anonymized.json", encoding="utf-8"
+        ) as f:
+            data = json.load(f)
+        source = data["elastic_results"]["hits"]["hits"][0]["_source"]
+        source["meter"].pop("timezone", None)
+        return web.Response(text=json.dumps(data))
+
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_no_timezone)
+    websession = await aiohttp_client(app)
+
+    _, client = await build_client(websession)
+    reader = MeterReader(
+        meter_uuid="meter_uuid",
+        meter_id="meter_id",
+        timezone="America/Chicago",
+    )
+    meter_info = await reader.read_meter_info(client)
+    Meter(reader, meter_info)
+
+    assert reader.timezone == "America/Chicago"  # nosec: B101
