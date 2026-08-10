@@ -1,5 +1,6 @@
 """Tests for pyonwater client."""  # nosec: B101, B106
 
+from collections.abc import Awaitable, Callable
 import datetime
 import json
 import logging
@@ -9,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 from aiohttp import web
 from conftest import (
     add_error_decorator,
+    build_client,
     mock_get_meters_endpoint,
     mock_read_meter_endpoint,
     mock_signin_endpoint,
@@ -642,3 +644,77 @@ async def test_request_logs_long_error_payload_truncated(
     expected = "X" * 1000 + "..."
     assert expected in caplog.text  # nosec: B101
     assert payload not in caplog.text  # nosec: B101
+
+
+# ---------------------------------------------------------------------------
+# fetch_meters: one malformed meter must not take down the whole account
+# ---------------------------------------------------------------------------
+
+
+def _dashboard_with_meters(
+    uuids: list[str],
+) -> Callable[[web.Request], Awaitable[web.Response]]:
+    """Build a dashboard endpoint advertising the given meter uuids."""
+    entries = ", ".join(
+        f'{{"meter_uuid": "{uuid}", "meter_id": "id_{uuid}"}}' for uuid in uuids
+    )
+    data = f"  AQ.Views.MeterPicker.meters = [{entries}];\n            junk"
+
+    async def endpoint(_request: web.Request) -> web.Response:
+        return web.Response(text=data)
+
+    return endpoint
+
+
+def _new_search_failing_for(
+    bad_uuid: str,
+) -> Callable[[web.Request], Awaitable[web.Response]]:
+    """Return a new_search endpoint that fails for one meter uuid only."""
+
+    async def endpoint(request: web.Request) -> web.Response:
+        payload = await request.json()
+        uuid = payload["query"]["terms"]["meter.meter_uuid"][0]
+        if uuid == bad_uuid:
+            # _source missing register_0 entirely -> ValidationError
+            broken = {"elastic_results": {"hits": {"hits": [{"_source": {}}]}}}
+            return web.Response(text=json.dumps(broken))
+        return await mock_read_meter_endpoint(request)
+
+    return endpoint
+
+
+@pytest.mark.asyncio()
+async def test_fetch_meters_skips_unparseable_meter(
+    aiohttp_client: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A meter with an unparseable payload is skipped, healthy ones survive."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/dashboard/user", _dashboard_with_meters(["good", "bad"]))
+    app.router.add_post("/api/2/residential/new_search", _new_search_failing_for("bad"))
+    websession = await aiohttp_client(app)
+    account, client = await build_client(websession)
+
+    with caplog.at_level(logging.WARNING, logger="pyonwater.account"):
+        meters = await account.fetch_meters(client=client)
+
+    assert len(meters) == 1  # nosec: B101
+    assert meters[0].meter_uuid == "good"  # nosec: B101
+    assert "Skipping meter id_bad" in caplog.text  # nosec: B101
+
+
+@pytest.mark.asyncio()
+async def test_fetch_meters_raises_when_every_meter_fails(
+    aiohttp_client: Any,
+) -> None:
+    """When no meter can be parsed the error is raised, not silently swallowed."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_get("/dashboard/user", _dashboard_with_meters(["bad"]))
+    app.router.add_post("/api/2/residential/new_search", _new_search_failing_for("bad"))
+    websession = await aiohttp_client(app)
+    account, client = await build_client(websession)
+
+    with pytest.raises(EyeOnWaterAPIError):
+        await account.fetch_meters(client=client)

@@ -157,13 +157,34 @@ class Account:
         *,
         prefer_new_search: bool = False,
     ) -> list[Meter]:
-        """List the meter states associated with the account."""
+        """List the meter states associated with the account.
+
+        A meter whose payload cannot be parsed is skipped rather than failing
+        the whole account, so one malformed meter does not hide the healthy
+        ones.  If every meter fails, the first error is re-raised so that a
+        total failure is still reported loudly instead of looking like an
+        account with no meters.
+        """
         meter_readers = await self.fetch_meter_readers(
             client, prefer_new_search=prefer_new_search
         )
         meters: list[Meter] = []
+        first_error: EyeOnWaterAPIError | None = None
         for reader in meter_readers:
-            meter_info = await reader.read_meter_info(client)
+            try:
+                meter_info = await reader.read_meter_info(client)
+            except EyeOnWaterAPIError as error:
+                _LOGGER.warning(
+                    "Skipping meter %s - could not read meter info: %s",
+                    reader.meter_id,
+                    error,
+                )
+                if first_error is None:
+                    first_error = error
+                continue
             meters.append(Meter(reader, meter_info))
+
+        if not meters and first_error is not None:
+            raise first_error
 
         return meters
