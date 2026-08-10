@@ -14,7 +14,14 @@ from pyonwater.models.eow_historical_models import (
     Params,
     TimeSerie,
 )
-from pyonwater.models.eow_models import Battery, Flags, LatestRead, Pwr
+from pyonwater.models.eow_models import (
+    Battery,
+    Flags,
+    LatestRead,
+    LeakAlert,
+    Pwr,
+    Reading,
+)
 from pyonwater.models.units import EOWUnits
 
 # ---------------------------------------------------------------------------
@@ -90,20 +97,34 @@ def test_meter_info_parses_leak_fields() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_flags_missing_mandatory_field_raises() -> None:
-    """Flags without EmptyPipe (mandatory aliased field) raises ValidationError."""
-    with pytest.raises(ValidationError):
-        Flags.model_validate(
-            {
-                # EmptyPipe intentionally omitted
-                "Leak": False,
-                "CoverRemoved": False,
-                "Tamper": False,
-                "ReverseFlow": False,
-                "LowBattery": False,
-                "BatteryCharging": False,
-            }
-        )
+def test_flags_sparse_payload_parses() -> None:
+    """Flags with only a subset of keys parses; absent flags default to None.
+
+    Meters vary in which flags they report, and a missing flag must never
+    fail validation - that would take down the whole account
+    (kdeyev/eyeonwater#118, #179).
+    """
+    flags = Flags.model_validate(
+        {
+            # EmptyPipe and the other "core" flags intentionally omitted
+            "Leak": True,
+        }
+    )
+    assert flags.leak is True
+    assert flags.empty_pipe is None
+    assert flags.battery_charging is None
+
+
+def test_flags_empty_payload_parses() -> None:
+    """An entirely empty flags object is still valid."""
+    flags = Flags.model_validate({})
+    assert flags.leak is None
+
+
+def test_leak_alert_without_date_updated_parses() -> None:
+    """LeakAlert parses when date_updated is absent."""
+    alert = LeakAlert.model_validate({"alert_type": "leak"})
+    assert alert.date_updated is None
 
 
 def test_latest_read_invalid_units_raises() -> None:
@@ -184,6 +205,29 @@ def test_meter_info_with_flags_still_parses() -> None:
     model = MeterInfo.model_validate({"register_0": _MINIMAL_REGISTER_0})
     assert model.reading.flags is not None
     assert model.reading.flags.leak is False
+
+
+def test_only_consumed_fields_are_required() -> None:
+    """Guard against re-introducing mandatory fields the library never reads.
+
+    Every mandatory field is a total-failure risk: a meter that omits it
+    fails validation, and that has repeatedly taken down whole accounts
+    (kdeyev/eyeonwater#49, #104, #118, #179).  A field may only be required
+    if pyonwater itself consumes it - `Meter.reading` reads `latest_read`
+    and its `full_read` / `units` / `read_time`, and nothing else.
+    """
+    required = {
+        model.__name__: sorted(
+            name for name, f in model.model_fields.items() if f.is_required()
+        )
+        for model in (Flags, Reading, LatestRead, MeterInfo)
+    }
+    assert required == {
+        "Flags": [],
+        "Reading": ["latest_read"],
+        "LatestRead": ["full_read", "read_time", "units"],
+        "MeterInfo": ["reading"],
+    }
 
 
 # ---------------------------------------------------------------------------

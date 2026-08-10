@@ -51,7 +51,7 @@ class LeakAlert(BaseModel):
     alert_type: Optional[str] = None
     name: Optional[str] = None
     residential_user_name: Optional[str] = None
-    date_updated: Any
+    date_updated: Optional[Any] = None
     alert_uuid: Optional[str] = None
     state: Optional[str] = None
     date_created: Optional[str] = None
@@ -238,14 +238,17 @@ class Encoder(BaseModel):
 
 
 class Flags(BaseModel):
-    # Mandatory fields (used by EOW HA integration)
-    empty_pipe: bool = Field(..., alias="EmptyPipe")
-    leak: bool = Field(..., alias="Leak")
-    cover_removed: bool = Field(..., alias="CoverRemoved")
-    tamper: bool = Field(..., alias="Tamper")
-    reverse_flow: bool = Field(..., alias="ReverseFlow")
-    low_battery: bool = Field(..., alias="LowBattery")
-    battery_charging: bool = Field(..., alias="BatteryCharging")
+    # All flags are optional: nothing in this library consumes them, and
+    # meters vary in which ones they report.  A missing flag must never fail
+    # validation, because that takes down the whole account
+    # (kdeyev/eyeonwater#118, #179).
+    empty_pipe: Optional[bool] = Field(None, alias="EmptyPipe")
+    leak: Optional[bool] = Field(None, alias="Leak")
+    cover_removed: Optional[bool] = Field(None, alias="CoverRemoved")
+    tamper: Optional[bool] = Field(None, alias="Tamper")
+    reverse_flow: Optional[bool] = Field(None, alias="ReverseFlow")
+    low_battery: Optional[bool] = Field(None, alias="LowBattery")
+    battery_charging: Optional[bool] = Field(None, alias="BatteryCharging")
 
     # Optional fields
     forced: Optional[bool] = Field(None, alias="Forced")
