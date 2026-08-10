@@ -684,11 +684,11 @@ def _new_search_failing_for(
 
 
 @pytest.mark.asyncio()
-async def test_fetch_meters_skips_unparseable_meter(
+async def test_fetch_meters_skips_unparsable_meter(
     aiohttp_client: Any,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A meter with an unparseable payload is skipped, healthy ones survive."""
+    """A meter with an unparsable payload is skipped, healthy ones survive."""
     app = web.Application()
     app.router.add_post("/account/signin", mock_signin_endpoint)
     app.router.add_get("/dashboard/user", _dashboard_with_meters(["good", "bad"]))
