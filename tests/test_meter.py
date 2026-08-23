@@ -18,6 +18,7 @@ from conftest import (
 import pytest
 
 from pyonwater import (
+    AggregationLevel,
     DataPoint,
     EOWUnits,
     EyeOnWaterException,
@@ -25,6 +26,7 @@ from pyonwater import (
     Meter,
     MeterReader,
     NativeUnits,
+    RequestUnits,
 )
 
 # Mock for historical data request, but no actual data
@@ -364,6 +366,76 @@ async def test_meter_convert_to_native_preserves_flow_and_end_dt(
     assert converted.reading == 100.0
     assert converted.flow_value == 200.0
     assert converted.end_dt == end_dt
+
+
+async def test_meter_historical_wrapper_forwards_aggregation(
+    aiohttp_client: Any,
+) -> None:
+    """Meter.read_historical_data exposes the reader aggregation option."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    meter = await build_meter(client)
+
+    point = DataPoint(
+        dt=datetime(2026, 3, 1, tzinfo=timezone.utc),
+        reading=1.0,
+        unit=EOWUnits.UNIT_GAL,
+    )
+
+    with patch.object(
+        MeterReader,
+        "read_historical_data",
+        new=AsyncMock(return_value=[point]),
+    ) as mock_read:
+        await meter.read_historical_data(
+            client=client,
+            days_to_load=1,
+            aggregation=AggregationLevel.QUARTER_HOURLY,
+        )
+
+    mock_read.assert_awaited_once_with(
+        client=client,
+        days_to_load=1,
+        aggregation=AggregationLevel.QUARTER_HOURLY,
+        units=None,
+    )
+
+
+async def test_meter_historical_wrapper_forwards_units(aiohttp_client: Any) -> None:
+    """Meter.read_historical_data exposes the reader units option."""
+    app = web.Application()
+    app.router.add_post("/account/signin", mock_signin_endpoint)
+    app.router.add_post("/api/2/residential/new_search", mock_read_meter_endpoint)
+    websession = await aiohttp_client(app)
+    _, client = await build_client(websession)
+    meter = await build_meter(client)
+
+    point = DataPoint(
+        dt=datetime(2026, 3, 1, tzinfo=timezone.utc),
+        reading=1.0,
+        unit=EOWUnits.UNIT_GAL,
+    )
+
+    with patch.object(
+        MeterReader,
+        "read_historical_data",
+        new=AsyncMock(return_value=[point]),
+    ) as mock_read:
+        await meter.read_historical_data(
+            client=client,
+            days_to_load=1,
+            units=RequestUnits.LITERS,
+        )
+
+    mock_read.assert_awaited_once_with(
+        client=client,
+        days_to_load=1,
+        aggregation=AggregationLevel.HOURLY,
+        units=RequestUnits.LITERS,
+    )
 
 
 async def test_meter_cache_keeps_newer_data(aiohttp_client: Any) -> None:

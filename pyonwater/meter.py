@@ -6,7 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from .exceptions import EyeOnWaterException
-from .models import DataPoint
+from .models import AggregationLevel, DataPoint, RequestUnits
 from .units import EOWUnits, convert_to_native, deduce_native_units
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -70,11 +70,27 @@ class Meter:
         self._sync_reader_timezone()
 
     async def read_historical_data(
-        self, client: Client, days_to_load: int
+        self,
+        client: Client,
+        days_to_load: int,
+        *,
+        aggregation: AggregationLevel = AggregationLevel.HOURLY,
+        units: RequestUnits | None = None,
     ) -> list[DataPoint]:
-        """Read historical data for N last days."""
+        """Read historical data for the last N days.
+
+        Args:
+            client: The authenticated API client.
+            days_to_load: Number of days of history to retrieve.
+            aggregation: Granularity level for data (default: HOURLY).
+                Use QUARTER_HOURLY for 15-minute resolution.
+            units: Preferred units for response data (optional).
+        """
         historical_data = await self._reader.read_historical_data(
-            client=client, days_to_load=days_to_load
+            client=client,
+            days_to_load=days_to_load,
+            aggregation=aggregation,
+            units=units,
         )
 
         historical_data = [self.convert_to_native(dp) for dp in historical_data]
