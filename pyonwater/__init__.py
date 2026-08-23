@@ -15,11 +15,12 @@ from .exceptions import (
 )
 from .meter import Meter
 from .meter_reader import MeterReader
-from .models import DataPoint, EOWUnits, NativeUnits
+from .models import AggregationLevel, DataPoint, EOWUnits, NativeUnits, RequestUnits
 from .units import convert_to_native, deduce_native_units
 
 __all__ = [
     "Account",
+    "AggregationLevel",
     "Client",
     "DataPoint",
     "EOWUnits",
@@ -33,6 +34,7 @@ __all__ = [
     "Meter",
     "MeterReader",
     "NativeUnits",
+    "RequestUnits",
     "convert_to_native",
     "deduce_native_units",
 ]
