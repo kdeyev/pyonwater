@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import datetime
+from functools import partial
 import json
 import logging
 import time
@@ -136,7 +137,9 @@ class MeterReader:
             msg = f"days_to_load must be at least 1, got {days_to_load}"
             raise ValueError(msg)
 
-        today = datetime.datetime.now(tz=self._tzinfo()).replace(
+        loop = asyncio.get_running_loop()
+        timezone = await loop.run_in_executor(None, self._tzinfo)
+        today = datetime.datetime.now(tz=timezone).replace(
             hour=0,
             minute=0,
             second=0,
@@ -409,7 +412,9 @@ class MeterReader:
             msg = f"poll_interval must be non-negative, got {poll_interval}"
             raise ValueError(msg)
 
-        today = datetime.datetime.now(tz=self._tzinfo()).replace(
+        loop = asyncio.get_running_loop()
+        timezone = await loop.run_in_executor(None, self._tzinfo)
+        today = datetime.datetime.now(tz=timezone).replace(
             hour=0,
             minute=0,
             second=0,
@@ -474,9 +479,13 @@ class MeterReader:
         _LOGGER.debug(
             "Downloaded export CSV for task %s: %d bytes", task_id, len(raw_csv)
         )
-        points = self.parse_export_csv(
-            raw_csv,
-            export_resolution=export_resolution,
+        points = await loop.run_in_executor(
+            None,
+            partial(
+                self.parse_export_csv,
+                raw_csv,
+                export_resolution=export_resolution,
+            ),
         )
         _LOGGER.debug("Parsed %d export data points for task %s", len(points), task_id)
         return points
