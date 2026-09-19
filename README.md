@@ -47,3 +47,17 @@ loop = asyncio.get_event_loop()
 loop.run_until_complete(main())
 
 ```
+
+## Historical interval timestamps
+
+Hourly and quarter-hour historical data use canonical interval boundaries:
+
+- `DataPoint.dt` is the inclusive bucket start.
+- `DataPoint.end_dt` is the exclusive bucket end when the boundary is known.
+- `DataPoint.reading` is the cumulative register value at the end of the interval.
+- `DataPoint.flow_value` is the usage during `[dt, end_dt)` when supplied by EyeOnWater.
+
+EyeOnWater labels some intervals by their final minute (`:14`, `:29`, `:44`,
+or `:59`). The client normalizes those labels rather than exposing them as
+bucket starts. For resolutions without verified boundary semantics, `end_dt`
+remains `None`.

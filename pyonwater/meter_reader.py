@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 from pydantic import ValidationError
 import pytz
+from pytz.tzinfo import BaseTzInfo
 
 from .exceptions import EyeOnWaterAPIError, EyeOnWaterResponseIsEmpty
 from .models import DataPoint, HistoricalData, MeterInfo
@@ -28,6 +29,16 @@ EXPORT_STATUS_ENDPOINT = "/reports/export_check_status/"
 
 # Fallback units when the caller does not specify a preference.
 DEFAULT_REQUEST_UNITS = "cm"
+
+_FIXED_AGGREGATION_DURATIONS = {
+    AggregationLevel.QUARTER_HOURLY: datetime.timedelta(minutes=15),
+    AggregationLevel.HOURLY: datetime.timedelta(hours=1),
+}
+
+_EXPORT_RESOLUTION_DURATIONS = {
+    AggregationLevel.QUARTER_HOURLY.value: datetime.timedelta(minutes=15),
+    AggregationLevel.HOURLY.value: datetime.timedelta(hours=1),
+}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -168,7 +179,61 @@ class MeterReader:
 
         return statistics
 
-    def convert(self, data: HistoricalData, key: str) -> list[DataPoint]:
+    @staticmethod
+    def _localize_datetime(
+        value: datetime.datetime, timezone: BaseTzInfo
+    ) -> datetime.datetime:
+        """Return a datetime localized to the meter timezone."""
+        if value.tzinfo is not None:
+            return value.astimezone(timezone)
+        return timezone.localize(value)
+
+    @classmethod
+    def _interval_bounds(
+        cls,
+        date: datetime.datetime,
+        end_date: datetime.datetime | None,
+        timezone: BaseTzInfo,
+        aggregation: AggregationLevel,
+    ) -> tuple[datetime.datetime, datetime.datetime | None]:
+        """Return an inclusive start and exclusive end for an API interval."""
+        label = cls._localize_datetime(date, timezone)
+        duration = _FIXED_AGGREGATION_DURATIONS.get(aggregation)
+        if duration is None:
+            return label, None
+
+        if end_date is not None:
+            inclusive_end = cls._localize_datetime(end_date, timezone)
+            exclusive_end = timezone.normalize(
+                inclusive_end + datetime.timedelta(seconds=1)
+            )
+            duration_minutes = int(duration.total_seconds() // 60)
+            if (
+                exclusive_end.second == 0
+                and exclusive_end.microsecond == 0
+                and exclusive_end.minute % duration_minutes == 0
+            ):
+                start = timezone.normalize(exclusive_end - duration)
+                return start, exclusive_end
+
+        duration_minutes = int(duration.total_seconds() // 60)
+        if (
+            label.second == 0
+            and label.microsecond == 0
+            and (label.minute + 1) % duration_minutes == 0
+        ):
+            exclusive_end = timezone.normalize(label + datetime.timedelta(minutes=1))
+            start = timezone.normalize(exclusive_end - duration)
+            return start, exclusive_end
+
+        return label, timezone.normalize(label + duration)
+
+    def convert(
+        self,
+        data: HistoricalData,
+        key: str,
+        aggregation: AggregationLevel = AggregationLevel.HOURLY,
+    ) -> list[DataPoint]:
         """Convert the raw data into a list of DataPoint objects."""
 
         timezones = data.hit.meter_timezone
@@ -185,11 +250,20 @@ class MeterReader:
                 skipped_count += 1
                 continue
 
+            start_dt, end_dt = self._interval_bounds(
+                d.date,
+                d.end_date,
+                timezone,
+                aggregation,
+            )
+
             statistics.append(
                 DataPoint(
-                    dt=timezone.localize(d.date),
+                    dt=start_dt,
                     reading=d.bill_read,
                     unit=d.display_unit,
+                    flow_value=d.value,
+                    end_dt=end_dt,
                 ),
             )
 
@@ -311,7 +385,7 @@ class MeterReader:
         )
 
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self.convert, data, key)
+        return await loop.run_in_executor(None, self.convert, data, key, aggregation)
 
     async def read_historical_data_range_export(
         self,
@@ -400,7 +474,10 @@ class MeterReader:
         _LOGGER.debug(
             "Downloaded export CSV for task %s: %d bytes", task_id, len(raw_csv)
         )
-        points = self.parse_export_csv(raw_csv)
+        points = self.parse_export_csv(
+            raw_csv,
+            export_resolution=export_resolution,
+        )
         _LOGGER.debug("Parsed %d export data points for task %s", len(points), task_id)
         return points
 
@@ -459,7 +536,41 @@ class MeterReader:
         msg = f"Unsupported export url format: {export_url}"
         raise EyeOnWaterAPIError(msg)
 
-    def parse_export_csv(self, raw_csv: str) -> list[DataPoint]:
+    @classmethod
+    def _export_interval_bounds(
+        cls,
+        date: datetime.datetime,
+        timezone: BaseTzInfo,
+        export_resolution: str | None,
+    ) -> tuple[datetime.datetime, datetime.datetime | None]:
+        """Normalize an export's end label to inclusive start/exclusive end."""
+        label = cls._localize_datetime(date, timezone)
+        if export_resolution is None:
+            return label, None
+
+        duration = _EXPORT_RESOLUTION_DURATIONS.get(
+            export_resolution.strip().casefold()
+        )
+        if duration is None or label.second != 0 or label.microsecond != 0:
+            return label, None
+
+        duration_minutes = int(duration.total_seconds() // 60)
+        if (label.minute + 1) % duration_minutes == 0:
+            exclusive_end = timezone.normalize(label + datetime.timedelta(minutes=1))
+        elif label.minute % duration_minutes == 0:
+            exclusive_end = label
+        else:
+            return label, None
+
+        start = timezone.normalize(exclusive_end - duration)
+        return start, exclusive_end
+
+    def parse_export_csv(
+        self,
+        raw_csv: str,
+        *,
+        export_resolution: str | None = "hourly",
+    ) -> list[DataPoint]:
         """Parse range export CSV into data points."""
         if not raw_csv:
             return []
@@ -482,15 +593,21 @@ class MeterReader:
                     flow_value if isinstance(flow_value, str) and flow_value else None
                 )
                 flow = float(flow_str) if flow_str is not None else None
+                start_dt, end_dt = self._export_interval_bounds(
+                    dt_value,
+                    timezone,
+                    export_resolution,
+                )
             except (ValueError, KeyError, pytz.UnknownTimeZoneError):
                 _LOGGER.warning("Skipping unparsable CSV row: %s", row)
                 continue
             points.append(
                 DataPoint(
-                    dt=timezone.localize(dt_value),
+                    dt=start_dt,
                     reading=reading,
                     unit=read_unit,
                     flow_value=flow,
+                    end_dt=end_dt,
                 )
             )
 
