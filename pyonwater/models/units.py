@@ -17,6 +17,7 @@ class EOWUnits(str, Enum):
     UNIT_CCF = "CCF"
     UNIT_KGAL = "KGAL"
     UNIT_CM = "CM"
+    UNIT_10_CM = "10 CM"
     UNIT_CUBIC_METER = "CUBIC_METER"
     UNIT_LITER = "LITER"
     UNIT_LITERS = "Liters"

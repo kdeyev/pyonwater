@@ -187,6 +187,20 @@ def test_meter_info_minimal_payload_parses() -> None:
     assert model.leak is None
 
 
+def test_meter_info_accepts_10_cm_bill_display_units() -> None:
+    """MeterInfo accepts the 10-cubic-meter billing unit reported by the API."""
+    latest_read = {
+        **_MINIMAL_LATEST_READ,
+        "units": "10 CM",
+        "bill_display_units": "10 CM",
+    }
+
+    model = MeterInfo.model_validate({"register_0": {"latest_read": latest_read}})
+
+    assert model.reading.latest_read.units == EOWUnits.UNIT_10_CM
+    assert model.reading.latest_read.bill_display_units == EOWUnits.UNIT_10_CM
+
+
 def test_meter_info_without_flags_parses() -> None:
     """register_0 without a 'flags' key parses; flags defaults to None.
 

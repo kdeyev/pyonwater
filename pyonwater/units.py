@@ -10,6 +10,7 @@ def deduce_native_units(read_unit: EOWUnits) -> NativeUnits:
     if read_unit in [
         EOWUnits.UNIT_CUBIC_METER,
         EOWUnits.UNIT_CM,
+        EOWUnits.UNIT_10_CM,
         EOWUnits.UNIT_LITER,
         EOWUnits.UNIT_LITERS,
         EOWUnits.UNIT_LITER_LC,
@@ -43,6 +44,8 @@ def convert_to_native(  # noqa: C901
     if native_unit == NativeUnits.CM:
         if read_unit in [EOWUnits.UNIT_CUBIC_METER, EOWUnits.UNIT_CM]:
             return value
+        if read_unit == EOWUnits.UNIT_10_CM:
+            return value * 10
         if read_unit in [
             EOWUnits.UNIT_LITER,
             EOWUnits.UNIT_LITERS,
