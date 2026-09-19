@@ -16,8 +16,10 @@ from pyonwater import (
 def test_deduce_native_unit():
     """Test units deducing native units."""
 
+    assert EOWUnits("10 CM") == EOWUnits.UNIT_10_CM
     assert deduce_native_units(EOWUnits.UNIT_CUBIC_METER) == NativeUnits.CM
     assert deduce_native_units(EOWUnits.UNIT_CM) == NativeUnits.CM
+    assert deduce_native_units(EOWUnits.UNIT_10_CM) == NativeUnits.CM
     assert deduce_native_units(EOWUnits.UNIT_LITER) == NativeUnits.CM
     assert deduce_native_units(EOWUnits.UNIT_LITERS) == NativeUnits.CM
     assert deduce_native_units(EOWUnits.UNIT_LITER_LC) == NativeUnits.CM
@@ -60,6 +62,7 @@ def test_convert_units():
 
     assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_CM, 1.0) == 1.0
     assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_CUBIC_METER, 1.0) == 1.0
+    assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_10_CM, 1.0) == 10.0
     assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_LITER, 1000.0) == 1.0
     assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_LITERS, 1000.0) == 1.0
     assert convert_to_native(NativeUnits.CM, EOWUnits.UNIT_LITER_LC, 1000.0) == 1.0
