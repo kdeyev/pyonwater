@@ -16,8 +16,10 @@ from conftest import (
     mock_signin_endpoint,
 )
 import pytest
+import pytz
 
 from pyonwater import EyeOnWaterAPIError, EyeOnWaterResponseIsEmpty, MeterReader
+from pyonwater.models import HistoricalData
 from pyonwater.models.units import AggregationLevel, RequestUnits
 
 
@@ -187,6 +189,97 @@ async def test_meter_reader_historical_invalid_json_raises(aiohttp_client: Any) 
         await reader.read_historical_data(client=client, days_to_load=1)
 
 
+@pytest.mark.parametrize(
+    ("aggregation", "date", "end_date", "expected_end"),
+    [
+        (
+            AggregationLevel.HOURLY,
+            "2026-01-31 00:00:00",
+            "2026-01-31 00:59:59",
+            datetime.datetime(2026, 1, 31, 1, 0),
+        ),
+        (
+            AggregationLevel.QUARTER_HOURLY,
+            "2026-01-31 00:14:00",
+            "2026-01-31 00:14:59",
+            datetime.datetime(2026, 1, 31, 0, 15),
+        ),
+    ],
+)
+def test_convert_normalizes_interval_boundaries(
+    aggregation: AggregationLevel,
+    date: str,
+    end_date: str,
+    expected_end: datetime.datetime,
+) -> None:
+    """Historical data points use inclusive start and exclusive end times."""
+    data = HistoricalData.model_validate(
+        {
+            "hit": {"meter.timezone": ["US/Central"]},
+            "timeseries": {
+                "meter_uuid,0": {
+                    "series": [
+                        {
+                            "date": date,
+                            "end_date": end_date,
+                            "bill_read": 200823.0,
+                            "display_unit": "GAL",
+                            "value": 16.9,
+                        }
+                    ]
+                }
+            },
+        }
+    )
+    reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+
+    point = reader.convert(data, "meter_uuid,0", aggregation)[0]
+    timezone = pytz.timezone("US/Central")
+
+    assert point.dt == timezone.localize(  # nosec: B101
+        datetime.datetime(2026, 1, 31, 0, 0)
+    )
+    assert point.end_dt == timezone.localize(expected_end)  # nosec: B101
+    assert point.flow_value == 16.9  # nosec: B101
+
+
+def test_convert_normalizes_interval_across_dst_transition() -> None:
+    """An hourly interval remains one physical hour across spring forward."""
+    data = HistoricalData.model_validate(
+        {
+            "hit": {"meter.timezone": ["America/New_York"]},
+            "timeseries": {
+                "meter_uuid,0": {
+                    "series": [
+                        {
+                            "date": "2026-03-08 01:00:00",
+                            "end_date": "2026-03-08 01:59:59",
+                            "bill_read": 100.0,
+                            "display_unit": "GAL",
+                        }
+                    ]
+                }
+            },
+        }
+    )
+    reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+
+    point = reader.convert(
+        data,
+        "meter_uuid,0",
+        AggregationLevel.HOURLY,
+    )[0]
+    timezone = pytz.timezone("America/New_York")
+
+    assert point.dt == timezone.localize(  # nosec: B101
+        datetime.datetime(2026, 3, 8, 1)
+    )
+    assert point.end_dt == timezone.localize(  # nosec: B101
+        datetime.datetime(2026, 3, 8, 3)
+    )
+    assert point.end_dt - point.dt == datetime.timedelta(hours=1)  # nosec: B101
+
+
 @pytest.mark.asyncio()
 async def test_meter_reader_range_export(aiohttp_client: Any) -> None:
     """Verify export-range polling and CSV parsing."""
@@ -220,8 +313,8 @@ async def test_meter_reader_range_export(aiohttp_client: Any) -> None:
         return web.Response(
             text=(
                 "Read_Time,Read,Read_Unit,Flow,Timezone\n"
-                "03/01/2026 1:15 PM,101.5,GAL,1.25,US/Pacific\n"
-                "03/01/2026 12:15 PM,100.0,GAL,,US/Pacific\n"
+                "03/01/2026 1:59 PM,101.5,GAL,1.25,US/Pacific\n"
+                "03/01/2026 12:59 PM,100.0,GAL,,US/Pacific\n"
             )
         )
 
@@ -247,7 +340,19 @@ async def test_meter_reader_range_export(aiohttp_client: Any) -> None:
     assert [point.reading for point in data] == [100.0, 101.5]  # nosec: B101
     assert data[0].flow_value is None  # nosec: B101
     assert data[1].flow_value == 1.25  # nosec: B101
-    assert data[0].dt.tzinfo is not None  # nosec: B101
+    timezone = pytz.timezone("US/Pacific")
+    assert data[0].dt == timezone.localize(  # nosec: B101
+        datetime.datetime(2026, 3, 1, 12, 0)
+    )
+    assert data[0].end_dt == timezone.localize(  # nosec: B101
+        datetime.datetime(2026, 3, 1, 13, 0)
+    )
+    assert data[1].dt == timezone.localize(  # nosec: B101
+        datetime.datetime(2026, 3, 1, 13, 0)
+    )
+    assert data[1].end_dt == timezone.localize(  # nosec: B101
+        datetime.datetime(2026, 3, 1, 14, 0)
+    )
     sleep_mock.assert_awaited_once_with(0.1)
 
 
@@ -288,6 +393,28 @@ def test_parse_export_csv_skips_invalid_rows_with_warning(
     assert len(points) == 1  # nosec: B101
     assert points[0].reading == 100.0  # nosec: B101
     assert "Skipping unparsable CSV row" in caplog.text  # nosec: B101
+
+
+def test_parse_export_csv_normalizes_quarter_hour_intervals() -> None:
+    """Quarter-hour export labels become canonical interval boundaries."""
+    reader = MeterReader(meter_uuid="meter_uuid", meter_id="meter_id")
+    raw_csv = (
+        "Read_Time,Read,Read_Unit,Flow,Timezone\n"
+        "01/31/2026 00:14,200810.1,GAL,4.0,US/Central\n"
+        "01/31/2026 00:29,200814.3,GAL,4.2,US/Central\n"
+    )
+
+    points = reader.parse_export_csv(raw_csv, export_resolution="hr")
+    timezone = pytz.timezone("US/Central")
+
+    assert [point.dt for point in points] == [  # nosec: B101
+        timezone.localize(datetime.datetime(2026, 1, 31, 0, 0)),
+        timezone.localize(datetime.datetime(2026, 1, 31, 0, 15)),
+    ]
+    assert [point.end_dt for point in points] == [  # nosec: B101
+        timezone.localize(datetime.datetime(2026, 1, 31, 0, 15)),
+        timezone.localize(datetime.datetime(2026, 1, 31, 0, 30)),
+    ]
 
 
 # ---------------------------------------------------------------------------
