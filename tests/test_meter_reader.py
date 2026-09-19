@@ -3,6 +3,7 @@
 import datetime
 import json
 import logging
+import threading
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
@@ -814,6 +815,87 @@ def _capture_requested_dates(dates: list[str]) -> Any:
         return web.Response(text="")
 
     return mock_consumption
+
+
+@pytest.mark.asyncio()
+async def test_historical_timezone_resolution_runs_in_executor() -> None:
+    """Loading a pytz zone must not perform file I/O on the event loop."""
+    reader = MeterReader(
+        meter_uuid="meter_uuid",
+        meter_id="meter_id",
+        timezone="US/Central",
+    )
+    event_loop_thread = threading.get_ident()
+    worker_threads: list[int] = []
+    original_tzinfo = reader._tzinfo
+
+    def tracked_tzinfo() -> datetime.tzinfo:
+        worker_threads.append(threading.get_ident())
+        return original_tzinfo()
+
+    with (
+        patch.object(reader, "_tzinfo", side_effect=tracked_tzinfo),
+        patch.object(
+            reader,
+            "read_historical_data_one_day",
+            new=AsyncMock(return_value=[]),
+        ),
+    ):
+        await reader.read_historical_data(client=AsyncMock(), days_to_load=1)
+
+    assert worker_threads  # nosec: B101
+    assert all(thread_id != event_loop_thread for thread_id in worker_threads)
+
+
+@pytest.mark.asyncio()
+async def test_export_timezone_and_csv_parsing_run_in_executor() -> None:
+    """Export timezone loading and CSV parsing must not block the event loop."""
+    reader = MeterReader(
+        meter_uuid="meter_uuid",
+        meter_id="meter_id",
+        timezone="US/Central",
+    )
+    client = AsyncMock()
+    client.request.side_effect = [
+        '{"task_id":"task-123"}',
+        '{"state":"done","result":{"url":"/export.csv"}}',
+        (
+            "Read_Time,Read,Read_Unit,Flow,Timezone\n"
+            "03/01/2026 12:59,100.0,GAL,,US/Central\n"
+        ),
+    ]
+    event_loop_thread = threading.get_ident()
+    timezone_threads: list[int] = []
+    parser_threads: list[int] = []
+    original_tzinfo = reader._tzinfo
+    original_parser = reader.parse_export_csv
+
+    def tracked_tzinfo() -> datetime.tzinfo:
+        timezone_threads.append(threading.get_ident())
+        return original_tzinfo()
+
+    def tracked_parser(
+        raw_csv: str,
+        *,
+        export_resolution: str | None = "hourly",
+    ) -> list[Any]:
+        parser_threads.append(threading.get_ident())
+        return original_parser(raw_csv, export_resolution=export_resolution)
+
+    with (
+        patch.object(reader, "_tzinfo", side_effect=tracked_tzinfo),
+        patch.object(reader, "parse_export_csv", side_effect=tracked_parser),
+    ):
+        points = await reader.read_historical_data_range_export(
+            client=client,
+            days_to_load=1,
+        )
+
+    assert len(points) == 1  # nosec: B101
+    assert timezone_threads  # nosec: B101
+    assert parser_threads  # nosec: B101
+    assert all(thread_id != event_loop_thread for thread_id in timezone_threads)
+    assert all(thread_id != event_loop_thread for thread_id in parser_threads)
 
 
 async def _requested_dates_for(
