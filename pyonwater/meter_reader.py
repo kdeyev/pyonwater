@@ -173,7 +173,10 @@ class MeterReader:
                     units=units,
                 )
             except EyeOnWaterResponseIsEmpty:
-                _LOGGER.warning(
+                # Today's readings are posted hours after midnight, so an empty
+                # response for today is expected on every early poll.
+                _LOGGER.log(
+                    logging.DEBUG if date == today else logging.WARNING,
                     "Empty response from API for meter %s on %s - skipping this date",
                     self.meter_uuid,
                     date,
