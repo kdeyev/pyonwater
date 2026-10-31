@@ -1002,6 +1002,32 @@ async def test_historical_multiple_days_use_timezone(aiohttp_client: Any) -> Non
 
 
 @pytest.mark.asyncio()
+async def test_historical_empty_today_logs_debug_not_warning(
+    aiohttp_client: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An empty response for today is expected and must not warn.
+
+    Today's readings are posted hours after midnight, so every early poll gets
+    an empty response for today. An empty past day still warns.
+    """
+    with caplog.at_level(logging.DEBUG, logger="pyonwater.meter_reader"):
+        await _requested_dates_for(
+            aiohttp_client, _EVENING_IN_CHICAGO, "America/Chicago", days_to_load=2
+        )
+
+    levels = {
+        record.args[1].date().isoformat(): record.levelno
+        for record in caplog.records
+        if record.msg.startswith("Empty response from API")
+    }
+    assert levels == {  # nosec: B101
+        "2026-06-30": logging.WARNING,
+        "2026-07-01": logging.DEBUG,
+    }
+
+
+@pytest.mark.asyncio()
 async def test_export_range_uses_meter_timezone(aiohttp_client: Any) -> None:
     """The export range endpoints derive their dates from the meter timezone."""
     captured_params: dict[str, str] = {}
